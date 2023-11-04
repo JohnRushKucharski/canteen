@@ -19,9 +19,6 @@ class TestLog(unittest.TestCase):
         '''Test that the default data headers is an empty tuple.'''
         self.assertEqual((), Log().data_headers)
 
-    def test_causes_build_action_to_fail(self):
-        self.assertEqual(1, 2)
-
 # class TestLogger(unittest.TestCase):
 #     '''Tests the logger decorator.'''
 
