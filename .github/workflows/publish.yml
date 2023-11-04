@@ -8,13 +8,13 @@ jobs:
         name: Build
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
             - name: Setup Python
-                uses: actions/setup-python@v4
-                with:
-                    python-version: 3.12
-                    cache: pip
+              uses: actions/setup-python@v4
+              with:
+                python-version: 3.12
+                cache: pip
             - name: Install dependencies
-                run: pip install -r requirements.txt
+              run: pip install -r requirements.txt
             - name: Run tests
-                run: python -B -m pytest
+              run: python -B -m pytest
