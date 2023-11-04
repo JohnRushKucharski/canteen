@@ -1,0 +1,20 @@
+name: Publish to PyPi
+on:
+    push:
+        branches:
+            - main
+jobs:
+    build:
+        name: Build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: Setup Python
+                uses: actions/setup-python@v4
+                with:
+                    python-version: 3.12
+                    cache: pip
+            - name: Install dependencies
+                run: pip install -r requirements.txt
+            - name: Run tests
+                run: python -B -m pytest
