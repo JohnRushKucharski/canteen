@@ -28,6 +28,9 @@ jobs:
                 pip install build --user
             
             - name: Build binary wheel and source tarball
+              run: python3 -m build
+
+            - name: Store distribution packages
               uses: actions/upload-artifact@v3
               with:
                 name: python-package-distributions
