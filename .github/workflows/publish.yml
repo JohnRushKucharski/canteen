@@ -9,17 +9,24 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
+            
             - name: Setup Python
               uses: actions/setup-python@v4
               with:
                 python-version: 3.12
                 cache: pip
+            
             - name: Install dependencies
               run: pip install -r requirements.txt
+            
             - name: Run tests
               run: python -B -m pytest
+            
             - name: Install pypa/build
-              run: pip install build --user
+              run: >- 
+                python3 -m 
+                pip install build --user
+            
             - name: Build binary wheel and source tarball
               uses: actions/upload-artifact@v3
               with:
