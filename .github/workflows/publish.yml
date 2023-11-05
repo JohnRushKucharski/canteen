@@ -35,3 +35,28 @@ jobs:
               with:
                 name: python-package-distributions
                 path: dist/
+    # https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
+    publish-to-test-pypi:
+        name: Publish to Test PyPi
+        needs: 
+        - build
+        runs-on: ubuntu-latest
+
+        environment:
+            name: testpypi
+            url: https://test.pypi.org/p/canteen
+        
+        permissions:
+            id-token: write
+        
+        steps:
+        - name: Download distribution packages
+          uses: actions/download-artifact@v3
+          with:
+            name: python-package-distributions
+            path: dist/
+        
+        - name: Publish distribution
+          uses: pypa/gh-action-pypi-publish@release/v1
+          with:
+            repository-url: https://test.pypi.org/legacy/
