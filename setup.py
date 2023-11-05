@@ -17,7 +17,7 @@ setup(
     author='JohnRushKucharski',
     author_email='johnkucharski@gmail.com',
     license='GNU GPLv3',
-    classifiers=['License :: OSI Approved :: GNU GPLv3 License',
+    classifiers=['License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
                  'Programming Language :: Python :: 3.12',
                  'Operating System :: OS Independent'],
     install_requires=['numpy'
