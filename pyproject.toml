@@ -1,12 +1,13 @@
 [tool.poetry]
 name = "canteen"
-version = "0.1.0"
-description = ""
+version = "0.0.0"
+description = "A water management system operations model."
 authors = ["John Kucharski <johnkucharski@gmail.com>"]
+license = "GPL-3.0-or-later"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.12"
 
 
 [build-system]
