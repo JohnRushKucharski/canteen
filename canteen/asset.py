@@ -150,7 +150,6 @@ class DepreciationParameters:
             return 1 + deferred * self.acceleration
         return scheduler
 
-
 @dataclass(frozen=True)
 class Asset:
     '''
@@ -206,7 +205,7 @@ class Asset:
             val = max(self.salvage_value,
                       min(self.salvage_value + (value_range * self.parameters.ft(t)) + recap,
                           self.replacement_value))
-
+            
             return Asset(value=val,
                          salvage_value=self.salvage_value, replacement_value=self.replacement_value,
                          parameters=self.parameters, log=self.log)

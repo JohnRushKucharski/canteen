@@ -94,3 +94,11 @@ class TestAsset(unittest.TestCase):
         self.assertEqual(asset.remaining_life, 50)
         asset = Asset(value=0)
         self.assertEqual(asset.remaining_life, 0)
+
+    def test_depreciation(self):
+        '''Test the log_depreciation function.'''
+        asset = Asset()
+        for i in range(100):
+            self.assertAlmostEqual(asset.value, 100 - i)
+            asset = asset.depreciate(1)
+        self.assertEqual(asset.value, 0)

@@ -1,60 +1,38 @@
 '''
 Reservoir objects.
 '''
-import math
-from enum import Enum
-from typing import NamedTuple, Protocol, Callable
+import importlib
+from pathlib import Path
+from typing import Protocol, Any
 
-ReleaseRange = NamedTuple('ReleaseRange', [('min', float), ('max', float)])
-
-class Outlet(Protocol):
-    '''Template for a reservoir outlet.'''
+class Reservoir(Protocol):
+    '''Reservoir object.'''	
     name: str
-    location: float
-    design_range = ReleaseRange
+    storage: float
+    capacity: float
 
-    def operations(self, fill_state: float) -> ReleaseRange:
-        '''
-        Return the min and max possible release for a given reservoir state and outlet condition.
+    def operate(self, *args, **kwargs) -> Any:
+        '''Operate the reservoir.'''
 
-        Args:
-            state: the current reservoir fill state as a storage volume, stage, or other measure.
-        
-        Returns:
-            ReleaseRange (tuple[min: float, max: float]):
-            A tuple of the minimum and maximum possible releases.
-        '''
+    def outputs(self) -> tuple[str,...]:
+        '''Return the reservoir operate outputs.'''
 
-def basic_operations(outlet: Outlet, fill_state: float) -> ReleaseRange:
-    '''
-    Return the min and max possible release based on
-    reservoir fill state (volume, stage, etc.) and outlet constraints.
-    '''
-    over_gate = fill_state - outlet.location
-    if over_gate <= 0:
-        return ReleaseRange(0, 0)
-    # resvoir filled over outlet location.
-    return ReleaseRange(
-        min=min(outlet.design_range.min, over_gate),
-        max=min(over_gate, outlet.design_range.max))
+RESERVOIRS = {}
+OPERATIONS = {}
+PLUGIN_PATHS = list(Path(Path(__file__).parent.parent/'plugins'/'reservoir').glob('*.py'))
 
-type OutletOperations = Callable[[Outlet, float], ReleaseRange]
+def load_reservoir_plugins() -> None:
+    '''Load reservoir plugins.'''
+    for file in PLUGIN_PATHS:
+        module = importlib.import_module(f'plugins.reservoirs.{file.stem}', ".")
+        reservoirs, operations = module.initialize()
+        for k, v in reservoirs:
+            RESERVOIRS[k] = v
+        for k, v in operations:
+            OPERATIONS[k] = v
 
-class BasicOutlet(Outlet):
-    '''Basic outlet implementation.'''
-    def __init__(self, name: str = '', location: float = 0.0,
-                 design_range: ReleaseRange = ReleaseRange(0, math.inf),
-                 operation: OutletOperations = basic_operations) -> None:
-        self.name = name
-        self.location = location
-        self.design_range = design_range
-        self.__outlet_operation = operation
-
-    def operations(self, fill_state: float) -> ReleaseRange:
-        return self.__outlet_operation(self, fill_state)
-
-class OutletFailureState(Enum):
-    '''Failure states for outlet.'''
-    NORMAL = 0
-    FAILED_OPEN = 1
-    FAILED_CLOSED = 2
+def reservoir_factory(name: str, **kwargs) -> Reservoir:
+    '''Create an reservoir object.'''
+    if name not in RESERVOIRS:
+        raise ValueError(f'Reservoir plugin {name} not found.')
+    return RESERVOIRS[name](**kwargs)
