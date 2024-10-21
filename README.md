@@ -1,4 +1,4 @@
-# Cantten
+# Canteen
 
 The canteen python package is used to model reservoirs and reservoir operations in water resource systems.
 
