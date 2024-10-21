@@ -1,4 +1,19 @@
-'''Basic outlet, plugin implementation.'''	
+'''
+Basic outlet plugin.
+
+It serves 2 purposes:
+    1. Provides implementation of the Outlet interface.
+    2. Is an example for the development of other outlet plugins.
+
+Outlet plugins must define one or more implementations of the Outlet interface.
+        i.e. BasicOutlet below
+    
+All plugins must also contain an initialize() method. The Outlet plugin returns a dictionary
+containing one or more Outlet implementations, with string name keys for each implementation.
+        i.e. {'Basic': BasicOutlet}
+
+These principals are demonstrated below.
+'''
 import math
 from typing import NamedTuple
 from dataclasses import dataclass
@@ -25,6 +40,6 @@ class BasicOutlet:
             min=min(self.design_range.min, over_gate),
             max=min(over_gate, self.design_range.max))
 
-def initialize() -> tuple[str, BasicOutlet]:
+def initialize() -> dict[str, BasicOutlet]:
     '''Initialize the plugin.'''
-    return 'BasicOutlet', BasicOutlet
+    return {'BasicOutlet': BasicOutlet}

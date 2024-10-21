@@ -2,10 +2,10 @@
 Reservoir outlets.
 '''
 import copy
-import importlib
-from pathlib import Path
 from collections import Counter
 from typing import NamedTuple, Protocol
+
+from canteen.plugins import Tags, load_module, load_modules, load_plugin
 
 ReleaseRange = NamedTuple('ReleaseRange', [('min', float), ('max', float)])
 
@@ -27,23 +27,19 @@ class Outlet(Protocol):
             A tuple of the minimum and maximum possible releases.
         '''
 
-OUTLETS = {}
-PLUGIN_PATHS = list(Path(Path(__file__).parent.parent/'plugins'/'outlets').glob('*.py'))
+def load_outlet_module(module_name: str) -> None:
+    '''Discover and load single reservoir module by name.'''
+    load_module(module_name, Tags.OUTLETS)
 
-def load_outlet_plugins() -> None:
-    '''Load outlet plugins.'''
-    for file in PLUGIN_PATHS:
-        module = importlib.import_module(f'plugins.outlets.{file.stem}', ".")
-        k, v = module.initialize()
-        OUTLETS[k] = v
+def load_outlet_modules() -> None:
+    '''Discover and load all reservoir modules.'''
+    load_modules(Tags.OUTLETS)
 
-def outlet_factory(name: str, **kwargs) -> Outlet:
-    '''Create an outlet object.'''
-    if name not in OUTLETS:
-        raise ValueError(f'Outlet plugin {name} not found.')
-    return OUTLETS[name](**kwargs)
+def factory(name: str, **kwargs) -> Outlet:
+    '''Create an reservoir object.'''
+    return load_plugin(name, Tags.OUTLETS)(**kwargs)
 
-def sort_outlets(outlets: list[Outlet]) -> list[Outlet]:
+def sort_by_location(outlets: list[Outlet]) -> list[Outlet]:
     '''Sort outlets by location, name.'''
     class Reverse:
         '''Reverse comparison for sorting by location.'''
@@ -59,7 +55,7 @@ def format_outlets(outlets: list[Outlet]) -> tuple[Outlet,...]:
         outlet.name is set to = 'outlet' if it is empty, then
         new_name =  <outlet.name>@<outlet.location>, if unique
                     <outlet.name><duplicate_number>@<outlet.location> otherwise    
-    Returns a tuple of outlets sorted by location (in reverse order) and name.
+    Returns a tuple of outlets.
     '''
     def preprocss(outlets: list[Outlet]) -> list[Outlet]:
         '''
@@ -126,5 +122,4 @@ def format_outlets(outlets: list[Outlet]) -> tuple[Outlet,...]:
     # check for unique names.
     if len({o.name for o in outlets}) != len(outlets):
         raise ValueError(f'Failed to create unique names: {[o.name for o in outlets]}.')
-    sorted_outlets = sort_outlets(outlets)
-    return tuple(sorted_outlets)
+    return outlets

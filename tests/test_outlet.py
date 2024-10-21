@@ -4,18 +4,23 @@ Test the reservoir module.
 import unittest
 
 from plugins.outlets.basic import BasicOutlet
-from canteen.outlet import OUTLETS, ReleaseRange, load_outlet_plugins, outlet_factory, format_outlets
+
+from canteen.plugins import Tags, PLUGINS
+from canteen.outlet import (ReleaseRange, load_outlet_module,
+                            factory, format_outlets, sort_by_location)
 
 class TestOutletPlugins(unittest.TestCase):
     '''Tests functionality of plugin arthetecture for outlets'''
-    def test_load_outlet_plugins_registers_basic_outlet(self):
+    def test_load_moules_registers_basic_outlet(self):
         '''test'''
-        load_outlet_plugins()
-        self.assertDictEqual({'BasicOutlet': BasicOutlet}, OUTLETS)
+        load_outlet_module('basic')
+        self.assertDictEqual(PLUGINS[Tags.OUTLETS],
+                             {'BasicOutlet': BasicOutlet},)
+        # self.assertDictEqual({'BasicOutlet': BasicOutlet}, OUTLETS)
     def test_outlet_factory_returns_basic_outlet(self):
         '''test'''
-        load_outlet_plugins()
-        outlet = outlet_factory('BasicOutlet')
+        load_outlet_module('basic')
+        outlet = factory('BasicOutlet')
         self.assertIsInstance(outlet, BasicOutlet)
 
 class TestBasicOutlet(unittest.TestCase):
@@ -51,7 +56,8 @@ class TestFormatOutlets(unittest.TestCase):
         '''Test the format_outlets function.'''
         outlets = [BasicOutlet(location=1), BasicOutlet(location=2)]
         formatted_outlets = format_outlets(outlets)
-        self.assertEqual([outlet.name for outlet in formatted_outlets],
+        sorted_outlets = sort_by_location(formatted_outlets)
+        self.assertEqual([outlet.name for outlet in sorted_outlets],
                          ['outlet@2', 'outlet@1'], )
 
     def test_format_outlets_renaming_basic_case(self):
