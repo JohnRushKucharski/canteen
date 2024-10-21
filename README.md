@@ -1,8 +1,18 @@
 # Canteen
 
-The canteen python package is used to model reservoirs and reservoir operations in water resource systems.
+The canteen Python package is used to model reservoirs and reservoir operations in water resource systems.
 
-It designed to be as flexible a possible. It facilitates both simple and detailed representations of reservoirs and operational policies. For example, individual outlet (i.e., gate) level controls bound to reservoir pool-based operations (not unlike HEC-ResSim [https://www.hec.usace.army.mil/software/hec-ressim/]) can be modeled; or reservoirs can be modeled more simply without outlets and pools. This flexibility is achieved in part though a plugin-based architecture. Major package elements, i.e., Operations, Outlets, and Reservoirs can be extended as though the use of customized plugins.
+### Installation
+
+The canteen package Python dependencies are managed using Poetry. Installing poetry makes installing canteen and its dependencies straightforward.If you haven't already first install Python. To install Poetry follow the instructions here: https://python-poetry.org/docs/#installing-with-the-official-installer. Clone or fork the respository located on Github: https://github.com/JohnRushKucharski/canteen. Using your favorite command-line shell run:
+
+```
+poetry install
+```
+
+### Design
+
+canteen is designed to be as flexible a possible. It facilitates both simple and detailed representations of reservoirs and operational policies. For example, individual outlet (i.e., gate) level controls bound to reservoir pool-based operations (not unlike HEC-ResSim [https://www.hec.usace.army.mil/software/hec-ressim/]) can be modeled; or reservoirs can be modeled more simply without outlets and pools. This flexibility is achieved in part though a plugin-based architecture. Major package elements, i.e., Operations, Outlets, and Reservoirs can be extended as though the use of customized plugins.
 
 The following basic interfaces are at the core of the canteen package:
 
@@ -212,14 +222,17 @@ class PoolBasedOperations:
         '''Example outputs for pool based operations above.'''        
         return tuple(k for k, _ in reservoir.pools)
 ```
-For new plugins to be registered the must be: 
+For new plugin modules to be registered the module must: 
 
-1. Placed in the appropriate plugins folder, namely the: "canteen\plugins\operations", "canteen\plugins\outlets", or "canteen\plugins\reservoirs" directories. Examples are provided in each of these directories.
+1. Location: be placed in the appropriate plugins folder, namely the: "canteen\plugins\operations", "canteen\plugins\outlets", or "canteen\plugins\reservoirs" directories. Examples are provided in each of these directories.
 
-2. Each plugin (i.e. implementation of the relevant interface) is provided, via a initialize() function in the plugin's module. For example, the initialize() function from the plugins\outlets\basic.py module is show below. It loads the BasicOutlet plugin...
+2. Intialize Function: each plugin (i.e. implementation of the relevant interface) must contain an initialize() function. For example, the initialize() function from the plugins\outlets\basic.py module is show below. The initailize function must return a dictionary of key-value pairs. The key, are plugin names (strings). The values are the plugin implementations. For example the basic.py module initialize function shown below registers the BasicOutlet plugin.
 
 ```python
 def initialize() -> dict[str, BasicOutlet]:
     '''Initialize the plugin.'''
     return {'BasicOutlet': BasicOutlet}
 ```
+
+### Example Usage
+
