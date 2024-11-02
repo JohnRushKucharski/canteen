@@ -38,7 +38,7 @@ class TestActivePool(unittest.TestCase):
         Below first pool top returns first pool name.
         '''
         res = ReservoirWithPools(pools=Pools())
-        self.assertEqual(res.active_pool(0), 'dead')
+        self.assertEqual(res.active_pool(0), ('dead', 0))
 
     def test_above_last_pool_top_returns_empty_string(self):
         '''
@@ -52,4 +52,6 @@ class TestActivePool(unittest.TestCase):
         Middle pool returns expected string.
         '''
         res = ReservoirWithPools(pools=Pools())
-        self.assertEqual(res.active_pool(0.25), 'conservation')
+        act = res.active_pool(0.25)
+        self.assertEqual(act[0], 'conservation')
+        self.assertAlmostEqual(act[1], 0.05)

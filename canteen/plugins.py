@@ -28,7 +28,7 @@ PLUGINS = {
     Tags.RESERVOIRS: {},
 }
 
-def load_module(name: str, tag: Tags):
+def load_module(name: str, tag: Tags) -> None:
     '''
     Discover and load single plugin by name. 
     '''

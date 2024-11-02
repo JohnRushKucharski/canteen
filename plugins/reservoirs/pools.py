@@ -85,7 +85,7 @@ class ReservoirWithPools(BasicReservoir):
                 #bottom pool
                 if i == 0:
                     return k, volume
-                return k, volume - self.pools[i-1].v
+                return k, volume - self.pools.top_locations[i-1]
         return ''
 
 def initialize() -> dict[str, Reservoir]:

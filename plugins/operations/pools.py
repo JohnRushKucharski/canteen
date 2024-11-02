@@ -33,7 +33,6 @@ class PoolBasedOperations:
                 return tuple(releases)
             case 'conservation':
                 releases[1] = min(demand, pool_vol)
-                return tuple(releases)
             case 'flood':
                 releases[2] = min(pool_vol, max_flood_release)
             case 'surcharge':

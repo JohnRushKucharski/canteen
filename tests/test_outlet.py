@@ -15,12 +15,12 @@ class TestOutletPlugins(unittest.TestCase):
         '''test'''
         load_outlet_module('basic')
         self.assertDictEqual(PLUGINS[Tags.OUTLETS],
-                             {'BasicOutlet': BasicOutlet},)
+                             {'Basic': BasicOutlet},)
         # self.assertDictEqual({'BasicOutlet': BasicOutlet}, OUTLETS)
     def test_outlet_factory_returns_basic_outlet(self):
         '''test'''
         load_outlet_module('basic')
-        outlet = factory('BasicOutlet')
+        outlet = factory('Basic')
         self.assertIsInstance(outlet, BasicOutlet)
 
 class TestBasicOutlet(unittest.TestCase):

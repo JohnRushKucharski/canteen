@@ -1,5 +1,8 @@
-# ignor output directories and files created by examples
+# ignore output directories and files created by examples
 #examples/*/
+
+# ignore rayroberts sudo-example
+plugins/operations/rayroberts.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

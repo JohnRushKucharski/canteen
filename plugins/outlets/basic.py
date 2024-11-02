@@ -42,4 +42,4 @@ class BasicOutlet:
 
 def initialize() -> dict[str, BasicOutlet]:
     '''Initialize the plugin.'''
-    return {'BasicOutlet': BasicOutlet}
+    return {'Basic': BasicOutlet}
