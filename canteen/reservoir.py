@@ -36,7 +36,7 @@ class Reservoir(Protocol):
         Makes a deep copy of the Reservoir adds outlets attribute
         and returns new Reservoir object.
         '''
-    
+
     def operate(self, *args, **kwargs) -> Any:
         '''Calls operations to perform reservoir operations.'''
 
@@ -79,45 +79,3 @@ def load_reservoir_modules() -> None:
 def factory(name: str, **kwargs) -> Reservoir:
     '''Create an reservoir object.'''
     return load_plugin(name, Tags.RESERVOIRS)(**kwargs)
-
-# RESERVOIRS = {}
-# OPERATIONS = {}
-# PLUGIN_PATHS = list(Path(Path(__file__).parent.parent/'plugins'/'reservoir').glob('*.py'))
-
-# def find_module(name: str):
-#     '''
-#     Discover and load single reservoir plugin by name.
-#     '''
-#     for file in PATHS[Tags.RESERVOIRS]:
-#         if file.stem == name:
-#             load_plugins(name)
-#             return
-#     raise ValueError(f'Plugin module with name: {name} not found in {PLUGIN_PATHS}.')
-
-# def find_modules() -> None:
-#     '''
-#     Discover and load all reservoir plugins in path.
-#     '''
-#     for file in PLUGIN_PATHS[]:
-#         load_plugins(file.stem)
-
-# def load_plugins(module_name: str) -> None:
-#     '''
-#     Load plugin by name.
-#     '''
-#     module = importlib.import_module(f'plugins.reservoirs.{module_name}', '.')
-#     reservoirs, operations = module.initialize()
-#     for k, v in reservoirs.items():
-#         if k in RESERVOIRS and not isinstance(v, type(RESERVOIRS[k])):
-#             raise ValueError(
-#                 f'''Error: Reservoir plugin name: {k} is duplicated.
-#                 The same name is given to {RESERVOIRS[k]} plugin. {v}
-#                 cannot be added without overwriting {RESERVOIRS[k]}.''')
-#         RESERVOIRS[k] = v
-#     for k, v in operations.items():
-#         if k in OPERATIONS and not isinstance(v, type(OPERATIONS[k])):
-#             raise ValueError(
-#                 f'''Error: Operations plugin name: {k} is duplicated.
-#                 The same name is given to {OPERATIONS[k]} plugin. {v}
-#                 cannot be added without overwriting {OPERATIONS[k]}.''')
-#         OPERATIONS[k] = v
