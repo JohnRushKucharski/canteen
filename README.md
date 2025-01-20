@@ -4,7 +4,7 @@ The canteen Python package is used to model reservoirs and reservoir operations 
 
 ### Installation
 
-The canteen package Python dependencies are managed using Poetry. Installing poetry makes installing canteen and its dependencies straightforward. If you haven't already first install Python. To install Poetry follow the instructions here: https://python-poetry.org/docs/#installing-with-the-official-installer. Clone or fork the respository located on Github: https://github.com/JohnRushKucharski/canteen. Using your favorite command-line shell run:
+The canteen package Python dependencies are managed using Poetry. Installing poetry makes installing canteen and its dependencies straightforward. First, if you haven't already first install Python. Next, to install Poetry follow the instructions here: https://python-poetry.org/docs/#installing-with-the-official-installer. Then, clone or fork the respository located on Github: https://github.com/JohnRushKucharski/canteen. Finally, from the directory containing the local repository, using your favorite terminal or shell run:
 
 ```
 poetry install
@@ -12,7 +12,7 @@ poetry install
 
 ### Design
 
-canteen is designed to be as flexible a possible. It facilitates both simple and detailed representations of reservoirs and operational policies. For example, individual outlet (i.e., gate) level controls bound to reservoir pool-based operations (not unlike HEC-ResSim [https://www.hec.usace.army.mil/software/hec-ressim/]) can be modeled; or reservoirs can be modeled more simply (i.e., without outlets and pools). This flexibility is achieved in part though a plugin-based architecture. Major package elements, i.e., Operations, Outlets, and Reservoirs can be extended as though the use of customized plugins.
+canteen is designed to be as flexible a possible. It facilitates both simple and detailed representations of reservoirs and operational policies. For example, individual outlet (i.e., gate) level controls bound to reservoir pool-based operations (not unlike HEC-ResSim [https://www.hec.usace.army.mil/software/hec-ressim/]) can be modeled; or reservoirs can be modeled more simply (i.e., without outlets and pools). This flexibility is achieved in part though a plugin-based architecture. Major package elements, i.e., Operations, Outlets, and Reservoirs can be extended though the use of customized user-made plugins.
 
 The following basic interfaces are at the core of the canteen package:
 
@@ -118,9 +118,8 @@ class BasicReservoir:
         '''
         Makes a deep copy of the existing reservoir, returning one the outlets attribute.
         '''
-        reservoir = copy.deepcopy(Reservoir)
-        reservoir.outlets = sorter(format_outlets(outlets)) if sorter else format_outlets(outlets)
-        return reservoir
+        outlets = sorter(format_outlets(outlets)) if sorter else format_outlets(outlets)
+        return ReservoirWithOutlets(self.name, self.storage, self.capacity, self.operations,outlets)
     
     def operate(self, *args, **kwargs) -> Any:
         '''Perform reservoir operations.'''

@@ -1,8 +1,7 @@
 '''
 Reservoir objects.
 '''
-import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol, Callable, Self, Any
 
 #from canteen.operations import Operations
@@ -60,13 +59,18 @@ class BasicReservoir:
         '''
         Makes a deep copy of the existing reservoir, returning one the outlets attribute.
         '''
-        reservoir = copy.deepcopy(Reservoir)
-        reservoir.outlets = sorter(format_outlets(outlets)) if sorter else format_outlets(outlets)
-        return reservoir
+        outlets = sorter(format_outlets(outlets)) if sorter else format_outlets(outlets)
+        return ReservoirWithOutlets(self.name, self.storage, self.capacity, self.operations,
+                                    outlets)
 
     def operate(self, *args, **kwargs) -> Any:
         '''Perform reservoir operations.'''
         return self.operations(self, *args, **kwargs)
+
+@dataclass
+class ReservoirWithOutlets(BasicReservoir):
+    '''Reservoir with outlets.'''
+    outlets: list[Outlet] = field(default_factory=list)
 
 def load_reservoir_module(module_name: str) -> None:
     '''Discover and load single reservoir module by name.'''
