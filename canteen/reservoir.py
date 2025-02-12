@@ -51,7 +51,11 @@ class BasicReservoir:
     name: str = ''
     storage: float = 0.0
     capacity: float = 1.0
-    operations: Operations = load_basic_ops()
+    operations: None|Operations = None
+
+    def __post_init__(self) -> None:
+        if not self.operations:
+            self.operation = load_basic_ops()
 
     def add_outlets(
         self, outlets: tuple[Outlet],

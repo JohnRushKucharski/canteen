@@ -28,3 +28,15 @@ class TestReservoir(unittest.TestCase):
         self.assertEqual(res.storage, 0.0)
         res.operate(inflow=1.0)
         self.assertEqual(res.storage, 1.0)
+
+    # def test_operate_plugins(self):
+    #     '''Tests operations method calls operations function.'''
+    #     ops = load_basic_ops()
+    #     self.assertFalse(True)
+
+        # res = BasicReservoir()
+        # load_outlet_module('basic')
+        # res = res.add_outlets([PLUGINS[Tags.OUTLETS]['Basic']()])
+        # self.assertEqual(res.storage, 0.0)
+        # res.operate(inflow=1.0)
+        # self.assertEqual(res.storage, 0.5)
