@@ -1,7 +1,7 @@
 '''Test the reservoir.py module.'''
 import unittest
 
-from canteen.reservoir import BasicReservoir
+from canteen.reservoir import BasicReservoir, load_basic_ops
 from canteen.outlet import load_outlet_module
 from canteen.plugins import PLUGINS, Tags
 
@@ -29,14 +29,7 @@ class TestReservoir(unittest.TestCase):
         res.operate(inflow=1.0)
         self.assertEqual(res.storage, 1.0)
 
-    # def test_operate_plugins(self):
-    #     '''Tests operations method calls operations function.'''
-    #     ops = load_basic_ops()
-    #     self.assertFalse(True)
-
-        # res = BasicReservoir()
-        # load_outlet_module('basic')
-        # res = res.add_outlets([PLUGINS[Tags.OUTLETS]['Basic']()])
-        # self.assertEqual(res.storage, 0.0)
-        # res.operate(inflow=1.0)
-        # self.assertEqual(res.storage, 0.5)
+    def test_load_basic_ops(self):
+        '''Tests load_basic_ops function returns operations function.'''
+        ops = load_basic_ops()
+        self.assertEqual(ops.__name__, 'passive')
