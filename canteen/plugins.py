@@ -19,7 +19,7 @@ PATHS = {
     Tags.OUTLETS: list(
         Path(BASEPATH/f'{Tags.OUTLETS.value}').glob('*.py')),
     Tags.RESERVOIRS: list(
-        Path(BASEPATH/f'{Tags.OPERATIONS.value}').glob('*.py'))
+        Path(BASEPATH/f'{Tags.RESERVOIRS.value}').glob('*.py'))
 }
 
 PLUGINS = {

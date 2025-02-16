@@ -95,4 +95,4 @@ def initialize() -> dict[str, Reservoir]:
     Returns: dict[str, Reservoir]
         Keys for each dictionary are string names for the implementation values.
     '''
-    return {'Pools', ReservoirWithPools}
+    return {'Pools': ReservoirWithPools}

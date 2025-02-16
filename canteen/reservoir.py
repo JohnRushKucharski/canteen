@@ -55,7 +55,7 @@ class BasicReservoir:
 
     def __post_init__(self) -> None:
         if not self.operations:
-            self.operation = load_basic_ops()
+            self.operations = load_basic_ops()
 
     def add_outlets(
         self, outlets: tuple[Outlet],
