@@ -1,14 +1,14 @@
-# '''
-# Initializes plugins
-# '''
-# from canteen.plugins import Tags, load_modules, PLUGINS
+'''
+Initializes plugins
+'''
+from canteen.plugins import Tags, load_modules, PLUGINS
 
-# def initialize():
-#     '''Initialize plugins.'''
-#     for tag in Tags:
-#         load_modules(tag)
+def initialize():
+    '''Initialize plugins.'''
+    for tag in Tags:
+        load_modules(tag)
 
-# initialize()
-# print(PLUGINS)
+initialize()
+print(PLUGINS)
 
-# plug_ins = PLUGINS
+PLUGINS = PLUGINS
