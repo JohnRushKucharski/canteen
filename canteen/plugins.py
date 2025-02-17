@@ -1,34 +1,32 @@
 '''
 Plugin in utilties.
 '''
-#from enum import Enum
-#from pathlib import Path
+from enum import Enum
+from pathlib import Path
 from importlib import import_module
 
-from canteen import Tags, PATHS, PLUGINS
+class Tags(Enum):
+    '''Supported Plugin Types.'''
+    OPERATIONS = 'operations'
+    OUTLETS = 'outlets'
+    RESERVOIRS = 'reservoirs'
 
-# class Tags(Enum):
-#     '''Supported Plugin Types.'''
-#     OPERATIONS = 'operations'
-#     OUTLETS = 'outlets'
-#     RESERVOIRS = 'reservoirs'
+BASEPATH = Path(Path(__file__).parent.parent/'plugins')
 
-# BASEPATH = Path(Path(__file__).parent.parent/'plugins')
+PATHS = {
+    Tags.OPERATIONS: list(
+        Path(BASEPATH/f'{Tags.OPERATIONS.value}').glob('*.py')),
+    Tags.OUTLETS: list(
+        Path(BASEPATH/f'{Tags.OUTLETS.value}').glob('*.py')),
+    Tags.RESERVOIRS: list(
+        Path(BASEPATH/f'{Tags.RESERVOIRS.value}').glob('*.py'))
+}
 
-# PATHS = {
-#     Tags.OPERATIONS: list(
-#         Path(BASEPATH/f'{Tags.OPERATIONS.value}').glob('*.py')),
-#     Tags.OUTLETS: list(
-#         Path(BASEPATH/f'{Tags.OUTLETS.value}').glob('*.py')),
-#     Tags.RESERVOIRS: list(
-#         Path(BASEPATH/f'{Tags.RESERVOIRS.value}').glob('*.py'))
-# }
-
-# PLUGINS = {
-#     Tags.OPERATIONS: {},
-#     Tags.OUTLETS: {},
-#     Tags.RESERVOIRS: {},
-# }
+PLUGINS = {
+    Tags.OPERATIONS: {},
+    Tags.OUTLETS: {},
+    Tags.RESERVOIRS: {},
+}
 
 def load_module(name: str, tag: Tags) -> None:
     '''
