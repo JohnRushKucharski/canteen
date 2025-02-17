@@ -1,0 +1,59 @@
+# '''Ray Roberts example.'''
+# from typing import Any
+
+# import numpy as np
+# import pandas as pd
+
+# from canteen.reservoir import Reservoir
+# #from canteen.operations import Operations
+    
+# class RayRobertsOperations:
+#     '''Ray Roberts Operations Plugin.'''
+#     def operate(self, reservoir: Reservoir, df: pd.DataFrame, t: Any):
+#         '''
+#         Pool based operations from xxxx.sty HEC-ResSim file.
+        
+#         reservoir [Reservoir]: Ray Roberts reservoir object.
+#         df[pd.Dataframe]: Dataframe containing all the simulation inputs and outputs.
+#             Columns contain time series of simulation variables, e.x. 'ínflow_rr_acft' 
+#                 could be a column of inflow values for Ray Roberts dam recorded in acre-feet.
+#             Rows are labeled with the value of the timestep. 
+#                 This could be a datetime (i.e. 01-01-2020), or
+#                 an integer (e.x. t = 0, 1, 2, ... ,T), or something else.
+#         t[Any]: the current timestep label.
+#         '''
+#         # rating curve constants from ResSim.
+#         volumes = [0, 12, 25, 100, 200, 230, 400, 600, 800, 900] # totally made up volumes
+#         stages = [32.5, 39.2, 44.1, 45.6, 54.3, 57, 67.7, 71, 77, 85] # totally made up elevations
+        
+#         volume = reservoir.storage + df.loc[t, 'inflow_rr_acft']
+#         if volume < 400: # top of conservation pool/bottom of flood pool.        
+#             # top of inactive pool constant
+#             top_of_dead = 200 # made up number
+#             volume_in_pool = volume - top_of_dead
+#             water_demand = df.loc[t, 'demand_rr_acft']
+#             release = min(water_demand, volume_in_pool) # SOP
+#             df.loc[t, 'outflow_consv_rr_acft'] = release # SOP
+#             volume -= release
+#         if  400 < volume < 600: # 600: top of flood pool/bottom of surcharge space.
+#             # interpolates stage based on rating curve values
+#             # returns nan if volume is not in range of flood pool.
+#             stage = np.interp(volume, volumes, stages, np.nan, np.nan)
+#              # flood release constants (from ResSim converted to volumetric units)
+#             flood_stages = [71, 72.75, 75.6, 77] # made up values.
+#             flood_releases = [1, 1, 4.23, 5] # made up values (in acre-feet).
+#             release = np.interp(stage, flood_stages, flood_releases, np.nan, np.nan)
+#             df.loc[t, 'outflow_flood_rr_acft'] = release
+#             volume -= release
+#         # if ...
+#         #   ...
+#         df.loc[t, 'storage_rr_acft'] = volume
+#         reservoir.storage = volume
+#         return df
+
+#     def outputs(self):
+#         return ('simulation dataframe',)
+
+# def initialize():
+#     '''Required for the program to initialize the plugin.'''
+#     return {'RayRobertsOperations': RayRobertsOperations}

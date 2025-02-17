@@ -11,7 +11,7 @@ class Tags(Enum):
     OUTLETS = 'outlets'
     RESERVOIRS = 'reservoirs'
 
-BASEPATH = Path(Path(__file__).parent.parent/'plugins')
+BASEPATH = Path(Path(__file__).parent/'plugins')
 
 PATHS = {
     Tags.OPERATIONS: list(
