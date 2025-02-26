@@ -7,7 +7,7 @@ from canteen.plugin import load_module, load_modules, Tags, PLUGINS
 
 class Operations(Protocol):
     '''Provides interface for operation functions that can be dynamically installed as plugins.'''
-    def operate(self, reservoir: 'Reservoir', *args, **kwargs) -> Any: #type: ignore
+    def operate(self, *args, **kwargs) -> Any:
         '''Calls operations to perform reservoir operations.'''
     def output_labels(self) -> tuple[str,...]:
         '''Returns labels for operation outputs.'''
