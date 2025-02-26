@@ -5,7 +5,7 @@ import copy
 from collections import Counter
 from typing import NamedTuple, Protocol
 
-from canteen.plugins import Tags, load_module, load_modules, load_plugin
+from canteen.plugin import Tags, load_module, load_modules, load_plugin
 
 ReleaseRange = NamedTuple('ReleaseRange', [('min', float), ('max', float)])
 

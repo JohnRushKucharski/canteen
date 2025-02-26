@@ -3,9 +3,10 @@ Test the reservoir module.
 '''
 import unittest
 
-from plugins.outlets.basic import BasicOutlet
+#from plugins.outlets.basic import BasicOutlet
+from canteen.plugins.outlets.basic import BasicOutlet
 
-from canteen.plugins import Tags, PLUGINS
+from canteen.plugin import Tags, PLUGINS
 from canteen.outlet import (ReleaseRange, load_outlet_module,
                             factory, format_outlets, sort_by_location)
 

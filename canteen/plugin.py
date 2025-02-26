@@ -52,11 +52,11 @@ def load_plugins(module_name: str, tag: Tags) -> None:
     Load all plugins in named module.    
     '''
     module_locations = {
-        Tags.OPERATIONS: 'plugins.operations.',
-        Tags.OUTLETS: 'plugins.outlets.',
-        Tags.RESERVOIRS: 'plugins.reservoirs.'
+        Tags.OPERATIONS: 'canteen.plugins.operations.',
+        Tags.OUTLETS: 'canteen.plugins.outlets.',
+        Tags.RESERVOIRS: 'canteen.plugins.reservoirs.'
     }
-    module = import_module(f'{module_locations[tag]}{module_name}', '.')
+    module = import_module(f'{module_locations[tag]}{module_name}')
     found_plugins = module.initialize()
     for k, v in found_plugins.items():
         if k in PLUGINS[tag] and not isinstance(v, type(PLUGINS[tag][k])):

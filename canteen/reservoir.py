@@ -4,22 +4,22 @@ Reservoir objects.
 from dataclasses import dataclass, field
 from typing import Protocol, Callable, Self, Any
 
-#from canteen.operations import Operations
+from canteen.operations import Operations, Passive
 from canteen.outlet import Outlet, format_outlets, sort_by_location
-from canteen.plugins import Tags, PLUGINS, load_module, load_modules, load_plugin
+from canteen.plugin import Tags, load_module, load_modules, load_plugin
 
-type Operations = Callable[['Reservoir', Any], Any]
-'''
-Provides interface for operation functions that can be dynamically installed as plugins.
-'''
+# type Operations = Callable[['Reservoir', Any], Any]
+# '''
+# Provides interface for operation functions that can be dynamically installed as plugins.
+# '''
 
-def load_operations_module(module_name: str) -> None:
-    '''Discover and load single operations module by name.'''
-    load_module(module_name, Tags.OPERATIONS)
+# def load_operations_module(module_name: str) -> None:
+#     '''Discover and load single operations module by name.'''
+#     load_module(module_name, Tags.OPERATIONS)
 
-def load_operations_modules() -> None:
-    '''Discover and load all operations modules.'''
-    load_modules(Tags.OPERATIONS)
+# def load_operations_modules() -> None:
+#     '''Discover and load all operations modules.'''
+#     load_modules(Tags.OPERATIONS)
 
 @dataclass
 class Reservoir(Protocol):
@@ -39,12 +39,6 @@ class Reservoir(Protocol):
     def operate(self, *args, **kwargs) -> Any:
         '''Calls operations to perform reservoir operations.'''
 
-def load_basic_ops(basic_module: str = 'passive',
-                   basic_ops: str = 'passive') -> Operations:
-    '''Load basic operations module.'''
-    load_operations_module(basic_module)
-    return PLUGINS[Tags.OPERATIONS][basic_ops]
-
 @dataclass
 class BasicReservoir:
     '''Basic Reservoir implementing Reservoir Interface.'''
@@ -55,7 +49,7 @@ class BasicReservoir:
 
     def __post_init__(self) -> None:
         if not self.operations:
-            self.operations = load_basic_ops()
+            self.operations = Passive()
 
     def add_outlets(
         self, outlets: tuple[Outlet],
@@ -69,7 +63,7 @@ class BasicReservoir:
 
     def operate(self, *args, **kwargs) -> Any:
         '''Perform reservoir operations.'''
-        return self.operations(self, *args, **kwargs)
+        return self.operations.operate(self, *args, **kwargs)
 
 @dataclass
 class ReservoirWithOutlets(BasicReservoir):
