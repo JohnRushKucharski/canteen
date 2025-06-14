@@ -1,7 +1,7 @@
 '''Tests for the Asset module.'''
 import unittest
 
-from canteen.asset import DepreciationParameters, Asset
+from canteen.asset import Asset, build_ft, build_inverse_ft
 
 class TestFt(unittest.TestCase):
     '''
@@ -11,7 +11,7 @@ class TestFt(unittest.TestCase):
     '''
     def test_default_build_ft_linear_shape(self):
         '''Test the build_ft function.'''
-        ft = DepreciationParameters().build_ft()
+        ft = build_ft()
         self.assertEqual(ft(0), 1.00)
         self.assertEqual(ft(1), 0.99)
         self.assertEqual(ft(5), 0.95)
@@ -21,7 +21,7 @@ class TestFt(unittest.TestCase):
 
     def test_default_build_ft_concave_shape_faster_than_linear(self):
         '''Test the build_ft function.'''
-        ft = DepreciationParameters(k=1.1).build_ft()
+        ft = build_ft(k=1.1)
         self.assertEqual(ft(0), 1.00)
         self.assertLess(ft(1), 0.99)
         self.assertLess(ft(5), 0.95)
@@ -31,7 +31,7 @@ class TestFt(unittest.TestCase):
 
     def test_default_build_ft_convex_shape_slower_than_linear(self):
         '''Test the build_ft function.'''
-        ft = DepreciationParameters(k=0.9).build_ft()
+        ft = build_ft(k=0.9)
         self.assertEqual(ft(0), 1.0)
         self.assertGreater(ft(1), 0.99)
         self.assertGreater(ft(5), 0.95)
@@ -47,7 +47,7 @@ class TestInverseFt(unittest.TestCase):
     '''
     def test_default_build_inverse_ft_linear_shape(self):
         '''Test the build_inverse_ft function.'''
-        inverse_ft = DepreciationParameters().build_inverse_ft()
+        inverse_ft = build_inverse_ft()
         self.assertEqual(inverse_ft(1.0), 0)
         self.assertAlmostEqual(inverse_ft(0.99), 1)
         self.assertEqual(inverse_ft(0.5), 50)
@@ -55,7 +55,7 @@ class TestInverseFt(unittest.TestCase):
 
     def test_build_inverse_ft_concave_shape_faster_than_linear(self):
         '''Test the build_inverse_ft function.'''
-        inverse_ft = DepreciationParameters(k=1.1).build_inverse_ft()
+        inverse_ft = build_inverse_ft(k=1.1)
         self.assertEqual(inverse_ft(1.0), 0)
         self.assertGreater(inverse_ft(0.99), 1)
         self.assertGreater(inverse_ft(0.50), 50)
@@ -65,7 +65,7 @@ class TestInverseFt(unittest.TestCase):
 
     def test_build_inverse_ft_convex_shape_slower_than_linear(self):
         '''Test the build_inverse_ft function.'''
-        inverse_ft = DepreciationParameters(k=0.9).build_inverse_ft()
+        inverse_ft = build_inverse_ft(k=0.9)
         self.assertEqual(inverse_ft(1.0), 0)
         self.assertLess(inverse_ft(0.99), 1)
         self.assertLess(inverse_ft(0.50), 50)
@@ -81,18 +81,22 @@ class TestAsset(unittest.TestCase):
         '''Test the portion_remaining function.'''
         asset = Asset()
         self.assertEqual(asset.portion_remaining, 1.0)
-        asset = Asset(value=50)
+        asset = Asset()
+        asset.value = 50
         self.assertEqual(asset.portion_remaining, 0.5)
-        asset = Asset(value=0)
+        asset = Asset()
+        asset.value = 0
         self.assertEqual(asset.portion_remaining, 0.0)
 
     def test_remaining_life(self):
         '''Test the remaining_life function.'''
         asset = Asset()
         self.assertEqual(asset.remaining_life, 100)
-        asset = Asset(value=50)
+        asset = Asset()
+        asset.value = 50
         self.assertEqual(asset.remaining_life, 50)
-        asset = Asset(value=0)
+        asset = Asset()
+        asset.value = 0
         self.assertEqual(asset.remaining_life, 0)
 
     def test_depreciation(self):
@@ -100,5 +104,5 @@ class TestAsset(unittest.TestCase):
         asset = Asset()
         for i in range(100):
             self.assertAlmostEqual(asset.value, 100 - i)
-            asset = asset.depreciate(1)
+            asset.increment_time()
         self.assertEqual(asset.value, 0)

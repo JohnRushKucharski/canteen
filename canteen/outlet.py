@@ -13,7 +13,7 @@ class Outlet(Protocol):
     '''Template for a reservoir outlet.'''
     name: str
     location: float
-    design_range = ReleaseRange
+    design_range: ReleaseRange
 
     def operations(self, *args, **kwargs) -> ReleaseRange:
         '''
@@ -39,7 +39,7 @@ def factory(name: str, **kwargs) -> Outlet:
     '''Create an reservoir object.'''
     return load_plugin(name, Tags.OUTLETS)(**kwargs)
 
-def sort_by_location(outlets: list[Outlet]) -> list[Outlet]:
+def sort_by_location(outlets: list[Outlet]|tuple[Outlet,...]) -> tuple[Outlet,...]:
     '''Sort outlets by location, name.'''
     class Reverse:
         '''Reverse comparison for sorting by location.'''
@@ -47,7 +47,7 @@ def sort_by_location(outlets: list[Outlet]) -> list[Outlet]:
             self.value = value
         def __lt__(self, other):
             return self.value > other.value
-    return sorted(outlets, key=lambda o: (Reverse(o.location), o.name))
+    return tuple(sorted(outlets, key=lambda o: (Reverse(o.location), o.name)))
 
 def format_outlets(outlets: list[Outlet]) -> tuple[Outlet,...]:
     '''
@@ -57,7 +57,7 @@ def format_outlets(outlets: list[Outlet]) -> tuple[Outlet,...]:
                     <outlet.name><duplicate_number>@<outlet.location> otherwise    
     Returns a tuple of outlets.
     '''
-    def preprocss(outlets: list[Outlet]) -> list[Outlet]:
+    def preprocess(outlets: list[Outlet]) -> list[Outlet]:
         '''
         Makes deep copy of input outlets, sets empty names to 'outlet',
         '''
@@ -94,7 +94,7 @@ def format_outlets(outlets: list[Outlet]) -> tuple[Outlet,...]:
         for i, outlet in enumerate(duplicates):
             if is_first_pass:
                 if isinstance(outlet.location, int):
-                    location = outlet.location
+                    location = str(outlet.location)
                 elif isinstance(outlet.location, float):
                     location = f'{round(outlet.location, 1)}'
                 else:
@@ -106,7 +106,7 @@ def format_outlets(outlets: list[Outlet]) -> tuple[Outlet,...]:
                 outlet.name = f'{pre_name}{i+1}{location}'
         return duplicates
 
-    outlets = preprocss(outlets)
+    outlets = preprocess(outlets)
     name_counter = Counter([o.name for o in outlets])
     # fist pass add location to name.
     for k, n in name_counter.items():
@@ -122,4 +122,4 @@ def format_outlets(outlets: list[Outlet]) -> tuple[Outlet,...]:
     # check for unique names.
     if len({o.name for o in outlets}) != len(outlets):
         raise ValueError(f'Failed to create unique names: {[o.name for o in outlets]}.')
-    return outlets
+    return tuple(outlets)

@@ -1,7 +1,8 @@
 '''
-Plugin in utilties.
+Plugin in utilities.
 '''
 from enum import Enum
+from typing import Any
 from pathlib import Path
 from importlib import import_module
 
@@ -22,7 +23,7 @@ PATHS = {
         Path(BASEPATH/f'{Tags.RESERVOIRS.value}').glob('*.py'))
 }
 
-PLUGINS = {
+PLUGINS: dict[Tags, dict[str, Any]] = {
     Tags.OPERATIONS: {},
     Tags.OUTLETS: {},
     Tags.RESERVOIRS: {},

@@ -52,17 +52,24 @@ class BasicReservoir:
             self.operations = Passive()
 
     def add_outlets(
-        self, outlets: tuple[Outlet],
-        sorter: None|Callable[[list[Outlet]], list[Outlet]] = sort_by_location) -> Reservoir:
+        self, outlets: list[Outlet],
+        sorter: None|
+        Callable[[list[Outlet]|tuple[Outlet,...]], tuple[Outlet,...]] = sort_by_location
+        ) -> Reservoir:
         '''
         Makes a deep copy of the existing reservoir, returning one the outlets attribute.
         '''
-        outlets = sorter(format_outlets(outlets)) if sorter else format_outlets(outlets)
+        if sorter:
+            outlets_formatted = sorter(format_outlets(outlets))
+        else:
+            outlets_formatted = format_outlets(outlets)
         return ReservoirWithOutlets(self.name, self.storage, self.capacity, self.operations,
-                                    outlets)
+                                    outlets_formatted) # type: ignore #noqa: F821
 
     def operate(self, *args, **kwargs) -> Any:
         '''Perform reservoir operations.'''
+        if not self.operations:
+            raise ValueError('No operations defined for reservoir.')
         return self.operations.operate(self, *args, **kwargs)
 
 @dataclass

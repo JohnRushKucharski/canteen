@@ -1,216 +1,222 @@
 '''
-Depreciable asset module.
+Depreciable assets.
+
+Supported asset lifetime methods:
+- Useful life
+- Units of production
+
+Supported depreciation models:
+- Linear
+- Cascading
 '''
-from typing import Callable, Self
+from enum import Enum
 from dataclasses import dataclass, field
+from typing import Callable
 
-@dataclass(frozen=True)
-class DepreciationParameters:
-    '''Holds depreciation parameters.'''
-    k: float = 1.0
-    '''
-    Parameter controling shape of depreciation schedule.
-    
-    1.0 by default.
-    = 1.0 is linear (w.r.t time),
-    < 1.0 is convex (slower than linear),
-    > 1.0 is concave (faster than linear),
-    '''
-    n: int = 100
-    '''Number of periods in depreciation schedule.'''
-    maintenance_requirement: float = 1.0
-    '''Maintenance requirement per time period.'''
-    acceleration: float = 1.0
-    '''
-    Parameter controlling acceleration of depreciation schedule,
-    when required maintenance is not performed.
+class LifeTimeUnits(Enum):
+    '''Supported useful life units.'''
+    TIME = 'time'
+    '''Time periods.'''
+    PRODUCTION = 'production'
+    '''Units of production.'''
 
-    1.0 by default.
-
-    = 1.0 is no acceleraton (normal depreciation),
-    > 1.0 if faster than linear acceleration.
-    < 1.0 is invalid.
-
-    Defered maintenance can speed up deterioration (i.e., depreciation).
-    '''
-    ft: Callable[[float], float] = field(init=False)
+@dataclass
+class Lifetime:
+    '''Depreciation model for assets.'''
+    shape_parameter: float = 1.0
+    '''Parameter controlling shape of deprecation function.'''
+    useful_life: float = 100.0
+    '''Total initial useful life in lifetime units.'''
+    functional_age: float = 0.0
+    '''Current useful life in lifetime units.'''
+    lifetime_units: LifeTimeUnits = LifeTimeUnits.TIME
+    '''Units of useful life.'''
+    ft: Callable[[float], float] = field(init=False, repr=False)
     '''Portion of depreciable asset value remaining as function of time.'''
-    inverse_ft: Callable[[float], float] = field(init=False)
+    inverse_ft: Callable[[float], float] = field(init=False, repr=False)
     '''Time period in schedule corresponding to given portion of depreciable asset value.'''
-    scheduler: Callable[[float], float] = field(init=False)
-    '''Time periods of depreciation based on maintenance level.'''
 
     def __post_init__(self):
-        if self.k < 0:
-            raise ValueError(
-                f'Invalid shape_parameter, k: {self.k}. k must be > 0.'
-            )
-        if self.n < 1:
-            raise ValueError(
-                f'Invalid number of periods in depreciation schedule, n: {self.n}. n must be > 0.'
-            )
-        if self.acceleration < 1.0:
-            raise ValueError(
-                f'Invalid acceleration value: {self.acceleration}. Acceleration must be >= 1.0.'
-            )
-        object.__setattr__(self, 'ft', self.build_ft())
-        object.__setattr__(self, 'inverse_ft', self.build_inverse_ft())
-        object.__setattr__(self, 'scheduler', self.build_scheduler())
+        self.ft = build_ft(n=self.useful_life, k=self.shape_parameter)
+        self.inverse_ft = build_inverse_ft(n=self.useful_life, k=self.shape_parameter)
 
-    def build_ft(self) -> Callable[[float], float]:
-        '''Builds function that computes portion depreciated value remaining as function of time.'''
-        if self.k < 0:
-            raise ValueError(
-                f'Invalid shape_parameter, k: {self.k}. k must be > 0.'''
-            )
-        if self.n < 1:
-            raise ValueError(
-                f'Invalid number of periods in depreciation schedule, n: {self.n}. n must be > 0.'
-            )
-        def ft(t: float) -> float:  # pylint: disable=invalid-name
-            '''
-            Portion depreciable asset value remaining as function of time.
-
-            Args:
-                t (float): time period in depreciation schedule.
-
-            Returns:
-                float: portion of depreciable asset value remaining.
-            '''
-            if self.n <= t:
-                # prevents a negative result.
-                return 0.0
-            return (1 - t / self.n) ** self.k
-        return ft
-
-    def build_inverse_ft(self) -> Callable[[float], float]:
+    def age_to_value(self, asset: 'Asset', t: None|float = None) -> float:
         '''
-        Builds function that computes time period of depreciation for a given maintenance level.
-        '''
-        if self.k < 0:
-            raise ValueError(
-                f'Invalid shape_parameter, k: {self.k}. k must be > 0.'''
-            )
-        if self.n < 1:
-            raise ValueError(
-                f'Invalid number of periods in depreciation schedule, n: {self.n}. n must be > 0.'
-            )
-        def inverse_ft(y: float) -> float:
-            '''
-            Time period in schedule corresponding to given portion of depreciable asset value.
+        Computes depreciable asset value at time t.
         
-            Args:
-                y (float): portion of depreciable asset value remaining.
-        
-            Returns:
-                float: time period in depreciation schedule.
-            '''
-            if not 0.0 <= y <= 1.0:
-                # prevents a complex result, or non-sense y values.
-                raise ValueError(f'y: {y} must be between 0.0 and 1.0.')
-            return self.n * (1 - y) ** (1 / self.k)
-        return inverse_ft
+        Args:
+            asset (Asset): The asset to compute value for.
+            t (float): Time period in lifetime units.
 
-    def build_scheduler(self) -> Callable[[float], float]:
+        Returns:
+            float: Depreciated asset value.
         '''
-        Builds function that computes time period of depreciation for a given maintenance level.
-        '''
-        if self.k < 0:
-            raise ValueError(
-                f'Invalid shape_parameter, k: {self.k}. k must be > 0.'''
-            )
-        if self.n < 1:
-            raise ValueError(
-                f'Invalid number of periods in depreciation schedule, n: {self.n}. n must be > 0.'
-            )
-        if self.acceleration < 1:
-            raise ValueError('acceleration must be greater than or equal to 1.0.')
+        if t is None:
+            t = asset.lifetime.functional_age
+        if t < 0:
+            raise ValueError(f'Time parameter, t; {t} must be positive.')
+        if self.useful_life <= t:
+            print(f'Warning: time parameter, {t} exceeds useful life, {self.useful_life}.')
+            return asset.values.salvage
+        return asset.values.salvage + self.ft(t) * asset.values.depreciable_value
 
-        def scheduler(maintenance: float) -> float:
-            '''
-            Computes time periods of depreciation, for a given amount of maintenance.
-
-            Args:
-                maintenance (float): maintenance performed in time period.
-
-            Raises:
-                ValueError: if maintenance exceeds maintenance requirement.
-
-            Returns:
-                float: time periods of depreciation.
-            '''
-            if self.maintenance_requirement < maintenance:
-                raise ValueError(
-                    f'''Invalid maintenance value: {maintenance}.
-                    maintenance: {maintenance} > maintenance requirement {self.maintenance_requirement}. # pylint: disable=line-too-long
-                    '''
-                )
-            # if no deferred maintenance, returns 1 time period of depreciation.
-            deferred = (self.maintenance_requirement - maintenance) / self.maintenance_requirement
-            return 1 + deferred * self.acceleration
-        return scheduler
-
-@dataclass(frozen=True)
-class Asset:
+def build_ft(n: float = 100.0, k: float = 1.0) -> Callable[[float], float]:
     '''
-    Depreciable asset.
+    Builds a function that computes depreciable asset value at time t.
     
-    The depreciation function makes this class a sort of monad.
+    Args:
+        n (float): Useful life of asset in units of time or production.
+        k (float): Shape parameter for the depreciation function.
+    
+    Returns:
+        Callable: Function that computes portion of asset value remaining at time t.
     '''
-    value: float = 100.0
-    salvage_value: float = 0.0
-    replacement_value: float = 100.0
-    parameters: DepreciationParameters = DepreciationParameters()
-    depreciation_fn: Callable[[float], Self] = field(init=False)
-    log: list[float] = field(default_factory=list)
+    if n < 0:
+        raise ValueError(f'Useful life parameter, n: {n} must be greater than zero.')
+    if k < 0:
+        raise ValueError(f'Shape parameter, k: {k} must be greater than zero.')
+    def ft(t: float) -> float:
+        '''
+        Computes depreciable asset value at time t.
+        
+        Args:
+            t (float): Time period in lifetime units.
+        
+        Returns:
+            float: Portion asset value remaining.
+        '''
+        if t < 0:
+            print(f'Warning: invalid (negative) time parameter, {t} set to 0.')
+            return 1.0
+        if t > n:
+            print(f'Warning: invalid (t > n) time parameter, {t} set to {n}.')
+            return 0.0
+        return (1 - t / n) ** k
+    return ft
+
+def build_inverse_ft(n: float = 100.0, k: float = 1.0) -> Callable[[float], float]:
+    '''
+    Builds a function that computes time in depreciation schedule
+    as function of remaining portion of assets depreciable value.
+    
+    Args:
+        n (float): Useful life of asset in units of time or production.
+        k (float): Shape parameter for the depreciation function.
+    
+    Returns:
+        Callable: Function that converts portion remaining of depreciable value
+        to time on depreciation schedule.
+    '''
+    if n < 0:
+        raise ValueError(f'Useful life parameter, n: {n} must be greater than zero.')
+    if k < 0:
+        raise ValueError(f'Shape parameter, k: {k} must be greater than zero.')
+    def inverse_ft(y: float) -> float:
+        '''
+        Computes time period in depreciation schedule as function of 
+        remaining portion of depreciable value.
+        
+        Args:
+            y (float): Remaining portion of depreciable asset value.
+        Returns:
+            float: Time period in lifetime units.
+        '''
+        if not 0 <= y <= 1:
+            raise ValueError('Portion value remaining parameter, y: {y} must be on range: [0, 1].')
+        return n * (1 - y) ** (1 / k)
+    return inverse_ft
+
+@dataclass
+class Values:
+    '''Holds value range for an asset.'''
+    salvage: float = 0.0
+    '''Minimum value of the asset.'''
+    initial: float = 100.0
+    '''Original new value of the asset at time of creation.'''
+    current: float = 100.0
+    '''Current value of the asset.'''
 
     def __post_init__(self):
-        if not self.salvage_value <= self.value <= self.replacement_value:
+        if self.salvage < 0 or self.initial < 0:
+            raise ValueError('Values must be non-negative.')
+        if self.initial < self.salvage:
             raise ValueError(
-                f'''Invalid asset values.
-                salvage_value <= value <= replacement_value required.
-                salvage: {self.salvage_value}, value: {self.value}, and
-                replacement: {self.replacement_value} values found.
+                'Invalid value range: Initial value cannot be less than salvage value.'
+            )
+        if not self.salvage <= self.current <= self.initial:
+            raise ValueError(
+                f'''Invalid current value: {self.current}.
+                salvage <= current_value <= initial required.
+                salvage: {self.salvage}, current_value: {self.current},
+                and initial: {self.initial} values found.
                 '''
             )
-        object.__setattr__(self, 'depreciation_fn', self.bind_depreciation_fn())
 
     @property
-    def portion_remaining(self) -> float:
-        '''Portion of asset value remaining.'''
-        value_range = self.replacement_value - self.salvage_value
-        return (self.value - self.salvage_value) / value_range
+    def depreciable_value(self) -> float:
+        '''Computes the value range of the asset.'''
+        return self.initial - self.salvage
+
+@dataclass
+class Asset:
+    '''Depreciable asset.'''
+    values: Values = field(default_factory=Values)
+    '''Current, initial and salvage values for asset.'''
+    lifetime: Lifetime = field(default_factory=Lifetime)
+    '''Current age, useful life of the asset in lifetime units.'''
+
+    @property
+    def age(self) -> float:
+        '''Returns functional age of asset.'''
+        return self.lifetime.functional_age
+    @age.setter
+    def age(self, t: float) -> None:
+        '''Sets functional age of the asset, modifies value to match.'''
+        if t < 0:
+            raise ValueError(f'Functional age must be non-negative, got: {t}.')
+        if t < self.lifetime.functional_age:
+            print(f'''Invalid (t > useful_life) functional age:
+                  {t} set to useful life: {self.lifetime.useful_life}.''')
+            t = self.lifetime.useful_life
+        self.lifetime.functional_age = t
+        self.values.current = self.lifetime.age_to_value(self, t)
+
+    @property
+    def value(self) -> float:
+        '''Returns current value of the asset.'''
+        return self.values.current
+    @value.setter
+    def value(self, v: float) -> None:
+        '''Sets current value of the asset, modifies age to match.'''
+        if v < self.values.salvage or v > self.values.initial:
+            raise ValueError(f'''Invalid value: {v}.
+                             Must be in range: [{self.values.salvage}, {self.values.initial}].''')
+        self.values.current = v
+        portion_remaining = (v - self.values.salvage) / self.values.depreciable_value
+        self.lifetime.functional_age = self.lifetime.inverse_ft(portion_remaining)
+
+    @property
+    def accumulated_depreciation(self) -> float:
+        '''Computes accumulated depreciation of the asset.'''
+        return self.values.initial - self.values.current
 
     @property
     def remaining_life(self) -> float:
-        '''Remaining life of asset in time periods.'''
-        return self.parameters.n - self.parameters.inverse_ft(self.portion_remaining)
+        '''Computes remaining life of the asset in lifetime units.'''
+        return self.lifetime.useful_life - self.lifetime.functional_age
 
-    def bind_depreciation_fn(self) -> Callable[[float], Self]:
-        '''Builds depreciation function.'''
-        self.log.append(self.value) # this is done at binding time.
+    @property
+    def portion_remaining(self) -> float:
+        '''Computes portion of asset value remaining.'''
+        return (self.values.current - self.values.salvage) / self.values.depreciable_value
 
-        value_range = self.replacement_value - self.salvage_value
-
-        def depreciation_fn(maintenance: float) -> Self:
-            '''
-            Depreciates asset based on maintenance performed.
-            '''
-            maint = min(maintenance, self.parameters.maintenance_requirement)
-            recap = max(0.0, maint - self.parameters.maintenance_requirement)
-
-            t = min(self.parameters.n,
-                    self.parameters.inverse_ft(self.portion_remaining) + self.parameters.scheduler(maint)) # pylint: disable=line-too-long
-
-            val = max(self.salvage_value,
-                      min(self.salvage_value + (value_range * self.parameters.ft(t)) + recap,
-                          self.replacement_value))
-            
-            return Asset(value=val,
-                         salvage_value=self.salvage_value, replacement_value=self.replacement_value,
-                         parameters=self.parameters, log=self.log)
-        return depreciation_fn
-
-    def depreciate(self, maintenance: float) -> Self:
-        '''Depreciates asset value based on maintenance level.'''
-        return self.depreciation_fn(maintenance)
+    def increment_time(self, t: float = 1.0) -> None:
+        '''Advances the functional age of the asset by t periods.'''
+        self.lifetime.functional_age += t
+        if self.lifetime.functional_age < 0:
+            print(f'Warning: computed time: {self.lifetime.functional_age} set to 0.')
+            self.lifetime.functional_age = 0
+        if self.lifetime.useful_life < self.lifetime.functional_age:
+            self.values.current = self.values.salvage       #type: ignore[misc]
+        self.values.current = self.lifetime.age_to_value(   #type: ignore[misc]
+            self, self.lifetime.functional_age)             #type: ignore[misc]

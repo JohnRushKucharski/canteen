@@ -22,11 +22,11 @@ def load_operations_modules() -> None:
 
 class Passive:
     '''
-    Passive operations implments Operations interface.
+    Passive operations implements Operations interface.
     '''
-    def operate(self, reservoir: 'Reservoir', inflow: float) -> float: #type: ignore
+    def operate(self, reservoir: 'Reservoir', inflow: float) -> float: #type: ignore #noqa: F821
         '''
-        Simpliest possible operations, i.e.:
+        Simplest possible operations, i.e.:
 
             release = reservoir.storage + inflow - reservoir.capacity 
                         if (reservoir.storage + inflow) > reservoir.capacity
@@ -43,6 +43,10 @@ class Passive:
     def output_labels(self) -> tuple[str,...]:
         '''Returns labels for operation outputs.'''
         return ('Spill',)
+
+    def __repr__(self) -> str:
+        '''String representation of the Passive operations.'''
+        return 'Passive: Reservoir spills if capacity is exceeded.'
 
 def load_basic_ops(basic_module: str = 'passive_outlets',
                    basic_ops: str = 'PassiveOutlets') -> Operations:
