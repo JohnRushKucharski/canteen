@@ -219,7 +219,7 @@ def factory(
     if isinstance(location, int|float):
         if "location" in mappings:
             raise ValueError("location: location mapping already exists in mappings.")
-        mappings.add("location", constantmapping_factory(location, "location"))
+        mappings["location"] = constantmapping_factory(location, "location")
         info = MetaDataPlusRange(name=name if name else "static pool",
                                  description=description if description else f"A pool with fixed top of storage @{location}.", #pylint: disable=line-too-long
                                  range_ = (location, location))
@@ -233,7 +233,7 @@ def factory(
                                  description=description if description else f"pool with top of storage on range {location_range}.", #pylint: disable=line-too-long
                                  range_ = location_range)
         return VariablePool(info, mappings)
-    mappings.add("location", rulecurve_factory([1, 365], [1.0, 1.0]))
+    mappings["location"] = rulecurve_factory([1, 365], [1.0, 1.0])
     info = MetaDataPlusRange(name=name if name else "variable pool",
                              description=description if description else f"pool with top of storage on range {(1, 1)}.", #pylint: disable=line-too-long
                              range_ = (1, 1))

@@ -53,11 +53,24 @@ class TestMaps:
             Mappings([map1, map2])
 
     def test_add_duplicate_map_name_raises_error(self):
-        """Test that adding duplicate map name raises ValueError."""
+        """Test that adding duplicate map name via __setitem__ raises ValueError."""
         mappings = Mappings([ConstantMapping("first", 10.0)])
 
         with pytest.raises(ValueError, match="Duplicate mapping name found"):
-            mappings.add("first", ConstantMapping("first", 20.0))
+            mappings["first"] = ConstantMapping("first", 20.0)
+
+    def test_add_method_does_not_exist(self):
+        """Mappings.add() must not exist after removal."""
+        mappings = Mappings()
+
+        assert not hasattr(mappings, "add")
+
+    def test_empty_construction_is_valid(self):
+        """Mappings() with no arguments must construct successfully as an empty container."""
+        mappings = Mappings()
+
+        assert len(mappings) == 0
+        assert not list(mappings)
 
     def test_delete_map_raises_not_implemented(self):
         """Test that deleting maps raises NotImplementedError."""

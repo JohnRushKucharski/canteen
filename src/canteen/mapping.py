@@ -82,15 +82,6 @@ class Mappings(UserDict[str, Mapping]):
         '''
         return tuple(self.data.values())
 
-    def add(self, key: None|str, mapping: Mapping) -> None:
-        '''
-        Add a new mapping to the collection.
-        '''
-        key = key if key else mapping.info.name
-        if key in self.data:
-            raise ValueError(f"Duplicate mapping name found: {key}")
-        self.data[key] = mapping
-
     def __setitem__(self, key: str, value: Mapping) -> None:
         if key in self.data:
             raise ValueError(f"Duplicate mapping name found: {key}")
