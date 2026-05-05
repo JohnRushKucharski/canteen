@@ -30,6 +30,9 @@ class ReleaseRange:
 
     def check_units(self) -> None:
         '''Validate that min and max are of the same type (both numeric or both Quantity).'''
+        # units package not installed, nothing to check.
+        if Quantity is None:
+            return
         # both are not quantities, no need to check units.
         if not isinstance(self.min, Quantity) and not isinstance(self.max, Quantity):
             return
