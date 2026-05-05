@@ -24,12 +24,12 @@ class TestBaseReservoirInitialization:
 
     def test_storage_exceeds_capacity_raises_error(self):
         """Test that storage greater than capacity raises ValueError."""
-        with pytest.raises(ValueError, match="Storage must be between 0 and"):
+        with pytest.raises(ValueError, match="capacity.*must be greater than storage"):
             BaseReservoir(name="Invalid", storage=150, capacity=100)
 
     def test_negative_storage_raises_error(self):
         """Test that negative storage raises ValueError."""
-        with pytest.raises(ValueError, match="Storage must be between 0 and"):
+        with pytest.raises(ValueError, match="storage.*cannot be negative"):
             BaseReservoir(name="Invalid", storage=-10, capacity=100)
 
     def test_storage_at_capacity_boundary(self):

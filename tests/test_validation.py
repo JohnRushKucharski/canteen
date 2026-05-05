@@ -8,7 +8,9 @@ from canteen.validation import (
     is_greater_than,
     validate_is_greater_than,
     is_positive,
+    validate_is_positive,
     is_not_negative,
+    validate_is_not_negative,
     is_ascending_range,
     validate_is_ascending_range,
     is_on_range,
@@ -103,6 +105,42 @@ class TestIsNotNegative:
         """Test that negative values return False."""
         assert is_not_negative(-1) is False
         assert is_not_negative(-0.001) is False
+
+
+class TestValidateIsPositive:
+    """Test validate_is_positive function."""
+
+    def test_raises_when_zero(self):
+        """validate_is_positive raises ValueError when value is zero."""
+        with pytest.raises(ValueError):
+            validate_is_positive(0)
+
+    def test_raises_when_negative(self):
+        """validate_is_positive raises ValueError when value is negative."""
+        with pytest.raises(ValueError):
+            validate_is_positive(-1)
+
+    def test_no_raise_when_positive(self):
+        """validate_is_positive returns None when value is positive."""
+        assert validate_is_positive(1) is None
+        assert validate_is_positive(0.001) is None
+
+
+class TestValidateIsNotNegative:
+    """Test validate_is_not_negative function."""
+
+    def test_raises_when_negative(self):
+        """validate_is_not_negative raises ValueError when value is negative."""
+        with pytest.raises(ValueError):
+            validate_is_not_negative(-1)
+
+    def test_no_raise_when_zero(self):
+        """validate_is_not_negative returns None when value is zero."""
+        assert validate_is_not_negative(0) is None
+
+    def test_no_raise_when_positive(self):
+        """validate_is_not_negative returns None when value is positive."""
+        assert validate_is_not_negative(10) is None
 
 
 class TestIsAscendingRange:

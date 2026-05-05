@@ -17,6 +17,7 @@ from canteen.mapping import Mappings
 from canteen.pool import Pools
 from canteen.outlet import Outlets
 from canteen.operations import Operations, PassiveOperations
+from canteen.validation import validate_is_not_negative, validate_is_at_least
 
 class Reservoir(Protocol):
     '''
@@ -51,9 +52,8 @@ class BaseReservoir:
     outlets: None|Outlets = None
 
     def __post_init__(self) -> None:
-        if not 0 <= self.storage <= self.capacity:
-            raise ValueError(f"""Storage must be between 0 and {self.capacity}.
-                             Got storage={self.storage}.""")
+        validate_is_not_negative(self.storage, "storage")
+        validate_is_at_least(self.capacity, self.storage, "capacity", "storage")
         if self.pools and not self.is_pools_less_than_capacity(self.pools):
             raise ValueError(
                     f"""Invalid pool location. Reservoir capacity: {self.capacity} must be
