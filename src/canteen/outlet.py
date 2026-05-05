@@ -13,6 +13,7 @@ from typing import Sequence, Protocol, Callable
 
 from canteen.mapping import Mappings
 from canteen.units import Quantity, Category
+from canteen.validation import validate_is_not_negative, validate_is_ascending_range
 
 @dataclass(slots=True)
 class ReleaseRange:
@@ -23,10 +24,8 @@ class ReleaseRange:
     max: float|Quantity = math.inf
 
     def __post_init__(self) -> None:
-        if self.min < 0:
-            raise ValueError("ReleaseRange minimum cannot be negative")
-        if self.max < self.min:
-            raise ValueError("ReleaseRange maximum cannot be less than minimum")
+        validate_is_not_negative(self.min, "ReleaseRange minimum")
+        validate_is_ascending_range(self.min, self.max, "ReleaseRange")
         self.check_units()
 
     def check_units(self) -> None:
@@ -91,12 +90,7 @@ class BasicOutlet:
 
     def __post_init__(self) -> None:
         """Validate outlet parameters after initialization."""
-        if self.location < 0:
-            raise ValueError("Outlet location cannot be negative")
-        if self.design_range.min < 0:
-            raise ValueError("Design range minimum cannot be negative")
-        if self.design_range.max < self.design_range.min:
-            raise ValueError("Design range maximum cannot be less than minimum")
+        validate_is_not_negative(self.location, "Outlet location")
 
 
     def operations(self, fill_state: float|Quantity) -> ReleaseRange:

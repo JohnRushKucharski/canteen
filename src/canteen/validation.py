@@ -203,7 +203,7 @@ def validate_is_positive(value: int|float,
     ValueError
         If value is not positive
     """
-    if is_positive(value):
+    if not is_positive(value):
         raise ValueError(f"{name}: {value} must be positive.")
 
 def is_not_negative(value: int|float) -> bool:
@@ -238,7 +238,7 @@ def validate_is_not_negative(value: int|float,
     ValueError
         If value is negative
     """
-    if is_not_negative(value):
+    if not is_not_negative(value):
         raise ValueError(f"{name}: {value} cannot be negative.")
 
 def is_ascending_range(min_val: int|float, max_val: int|float) -> bool:
