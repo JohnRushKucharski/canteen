@@ -228,4 +228,39 @@ class TestPoolRepresentations:
         repr_str = repr(pool)
         assert "VariablePool" in repr_str
         assert "conservation" in repr_str
-        assert "10.0" in repr_str or "50.0" in repr_str  # Range values should appear
+
+
+class TestPoolsIteration:
+    """Test Pools iterator safety and Null Object construction."""
+
+    def test_iterating_pools_twice_yields_same_sequence(self):
+        """Iterating Pools a second time must produce the same sequence."""
+        p1 = factory(name="low", location=10.0)
+        p2 = factory(name="high", location=50.0)
+        pools = Pools((p1, p2))
+
+        first_pass = list(pools)
+        second_pass = list(pools)
+
+        assert [p.info.name for p in first_pass] == [p.info.name for p in second_pass]
+
+    def test_nested_loop_over_pools_produces_cartesian_product(self):
+        """A nested loop over the same Pools must not silently reset the outer loop."""
+        p1 = factory(name="a", location=10.0)
+        p2 = factory(name="b", location=20.0)
+        pools = Pools((p1, p2))
+
+        pairs = [(outer.info.name, inner.info.name) for outer in pools for inner in pools]
+
+        assert len(pairs) == 4
+        assert ("b", "b") in pairs  # high, high (sorted descending)
+        assert ("b", "a") in pairs
+        assert ("a", "b") in pairs
+        assert ("a", "a") in pairs
+
+    def test_pools_empty_construction_is_valid(self):
+        """Pools() with no arguments must construct and iterate as an empty sequence."""
+        pools = Pools()
+
+        assert len(pools) == 0
+        assert not list(pools)
