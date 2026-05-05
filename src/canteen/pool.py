@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 from canteen.metadata import MetaDataPlusRange
 from canteen.mapping import Mappings, constantmapping_factory, rulecurve_factory
+from canteen.validation import validate_is_not_negative, validate_is_ascending_range
 
 class Pool(Protocol):
     """Protocol for pool components."""
@@ -79,7 +80,7 @@ class Pools:
             If volume is negative or exceeds all pool locations.
         """
         if volume < 0:
-            raise ValueError("Volume cannot be negative")
+            validate_is_not_negative(volume, "volume")
         # Find first pool with volume
         for i, pool in enumerate(self.pools):
             top = pool.location(*args, **kwargs)
@@ -121,8 +122,7 @@ class StaticPool:
             raise ValueError("""StaticPool requires a 'location' mapping in mappings.
                              Use the factory function or provide a location mapping in mappings.""")
         loc = mappings["location"].f()
-        if loc < 0:
-            raise ValueError(f"Pool location cannot be negative, got {loc}.")
+        validate_is_not_negative(loc, "Pool location")
         if info.range_[0] != info.range_[1] or info.range_[0] != loc:
             raise ValueError(f"""StaticPool range must be a single value matching location mapping.
                              Got range {info.range_} and location {loc}.""")
@@ -168,7 +168,8 @@ class VariablePool:
         if "location" not in mappings:
             raise ValueError("VariablePool requires a 'location' mapping in mappings.")
         if info.range_[0] > info.range_[1] or info.range_[0] < 0:
-            raise ValueError(f"Pool location must be positive range. Got range {info.range_}.")
+            validate_is_not_negative(info.range_[0], "Pool location range minimum")
+            validate_is_ascending_range(info.range_[0], info.range_[1], "Pool location range")
         self.info: MetaDataPlusRange = info
         self.mappings: None|Mappings = mappings
 

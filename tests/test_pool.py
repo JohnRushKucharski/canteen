@@ -51,7 +51,7 @@ class TestVariablePool:
         mappings = Mappings([rulecurve_factory([1, 100, 365], [-10.0, 5.0, 10.0], name="location")])
         info = MetaDataPlusRange(name="test", range_=(-10.0, 10.0))
 
-        with pytest.raises(ValueError, match="positive range"):
+        with pytest.raises(ValueError, match="cannot be negative"):
             VariablePool(info=info, mappings=mappings)
 
     def test_variablepool_location_with_args(self):
