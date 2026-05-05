@@ -222,8 +222,8 @@ class TestPoolRepresentations:
 
     def test_variablepool_repr_shows_name_and_range(self):
         """Test that VariablePool.__repr__ includes name and location range."""
-        pool = factory(name="conservation", location=None, 
-                      mappings=Mappings([rulecurve_factory([1, 365], [10.0, 50.0], name="location")]))
+        mappings = Mappings([rulecurve_factory([1, 365], [10.0, 50.0], name="location")])
+        pool = factory(name="conservation", location=None, mappings=mappings)
 
         repr_str = repr(pool)
         assert "VariablePool" in repr_str

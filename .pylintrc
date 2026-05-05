@@ -1,0 +1,16 @@
+[MESSAGES CONTROL]
+disable =
+    # Protocol classes and test classes intentionally have few methods.
+    # This rule produces false positives for Protocol-based designs (ADR-0002).
+    too-few-public-methods,
+
+    # TODO comments are tracked in GitHub Issues, not via pylint.
+    fixme,
+
+    # Factory functions (e.g. reservoir.factory) legitimately require many
+    # arguments because they mirror the full construction surface of the object.
+    too-many-arguments,
+    too-many-positional-arguments,
+
+[FORMAT]
+max-line-length = 100

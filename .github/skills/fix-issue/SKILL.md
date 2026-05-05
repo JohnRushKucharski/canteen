@@ -151,11 +151,12 @@ Run this loop up to **3 times**, or until only MINOR issues remain — whichever
 
 ```bash
 uv run ruff check src/
+uv run pylint src/ tests/ --output-format=text
 uv run mypy src/
 uv run pytest tests/ --cov=src/canteen --cov-report=term-missing
 ```
 
-All three commands must exit 0.
+All four commands must exit 0. Pylint warnings must be resolved or suppressed in `.pylintrc` with a written justification comment. Never use inline `# pylint: disable` to silence a warning without first checking whether it reflects a genuine code smell.
 
 #### 6. Classify findings
 

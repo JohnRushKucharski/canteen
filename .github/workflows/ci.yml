@@ -24,6 +24,9 @@ jobs:
       - name: Lint
         run: uv run ruff check src/
 
+      - name: Pylint
+        run: uv run pylint src/ tests/ --output-format=text
+
       - name: Type check
         run: uv run mypy src/
 

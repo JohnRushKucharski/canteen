@@ -44,6 +44,7 @@ uv run pytest old/tests/  # Legacy tests (33 tests, all pass)
 **Lint/Type Check**:
 ```bash
 uv run ruff check src/     # Linting (passes cleanly)
+uv run pylint src/ tests/  # Pylint (passes cleanly, .pylintrc configures suppressions)
 uv run mypy src/           # Type checking (passes cleanly)
 ```
 

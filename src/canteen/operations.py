@@ -94,8 +94,7 @@ class PassiveOperations:
         if reservoir.outlets and self.verbose:
             outlet_labels = [outlet.name for outlet in reservoir.outlets]
             return tuple(outlet_labels + ['Spill'])
-        else:
-            return ("Spill",)
+        return ("Spill",)
 
     def __repr__(self) -> str:
         """String representation."""
