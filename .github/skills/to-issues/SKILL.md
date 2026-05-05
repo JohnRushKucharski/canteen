@@ -60,6 +60,10 @@ Publish issues in dependency order (blockers first) so you can reference real is
 
 A reference to the parent issue on the issue tracker (if the source was an existing issue, otherwise omit this section).
 
+## Type
+
+AFK or HITL (from the classification you assigned in the quiz phase).
+
 ## What to build
 
 A concise description of this vertical slice. Describe the end-to-end behavior, not layer-by-layer implementation.

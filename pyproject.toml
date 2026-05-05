@@ -23,15 +23,23 @@ dev = [
     "ipykernel>=6.29.5",
     "mypy>=1.17.1",
     "pytest>=8.4.2",
+    "pytest-cov>=7.1.0",
     "ruff>=0.12.12",
 ]
 
 [tool.uv.sources]
 units = { git = "https://github.com/JohnRushKucharski/units" }
 
+[tool.coverage.run]
+source = ["src/canteen"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+show_missing = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = ["-v", "--tb=short"]
+addopts = ["-v", "--tb=short", "--cov=src/canteen", "--cov-report=term-missing"]

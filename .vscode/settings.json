@@ -1,4 +1,5 @@
 {
+    "isort.check": false,
     "python.testing.pytestArgs": [
         "tests",
         "-v",
