@@ -84,7 +84,7 @@ class TestBuilderPatternAPI:
         # Create base reservoir
         res = BaseReservoir(name="Builder Dam", storage=50.0, capacity=100.0)
         assert res.operations is None
-        assert res.outlets is None
+        assert len(res.outlets) == 0  # Null Object — empty but never None (ADR-0003)
 
         # Add operations
         res.add_operations(operations.factory())

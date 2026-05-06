@@ -18,9 +18,22 @@ class TestBaseReservoirInitialization:
         assert reservoir.storage == 50
         assert reservoir.capacity == 100
         assert reservoir.operations is None
-        assert reservoir.mappings is None
-        assert reservoir.pools is None
-        assert reservoir.outlets is None
+
+    def test_freshly_constructed_reservoir_has_null_object_containers(self):
+        """Freshly constructed reservoir has empty containers, never None (ADR-0003)."""
+        reservoir = BaseReservoir(name="Test", storage=0, capacity=100)
+
+        assert reservoir.mappings is not None
+        assert isinstance(reservoir.mappings, Mappings)
+        assert len(reservoir.mappings) == 0
+
+        assert reservoir.pools is not None
+        assert isinstance(reservoir.pools, Pools)
+        assert len(reservoir.pools) == 0
+
+        assert reservoir.outlets is not None
+        assert isinstance(reservoir.outlets, Outlets)
+        assert len(reservoir.outlets) == 0
 
     def test_storage_exceeds_capacity_raises_error(self):
         """Test that storage greater than capacity raises ValueError."""
@@ -293,3 +306,118 @@ class TestReservoirRepresentation:
         assert "outlets=" in repr_str
         assert "low_level" in repr_str
         assert "spillway" in repr_str
+
+
+class TestReservoirFreeze:
+    """Test that structural fields are frozen after construction (ADR-0002)."""
+
+    def test_direct_assignment_to_outlets_raises_after_construction(self):
+        """Direct assignment to a structural field raises AttributeError."""
+        reservoir = BaseReservoir(name="Test", storage=0, capacity=100)
+        with pytest.raises(AttributeError):
+            reservoir.outlets = Outlets()  # type: ignore[misc]
+
+    def test_direct_assignment_to_pools_raises_after_construction(self):
+        """Direct assignment to pools raises AttributeError."""
+        reservoir = BaseReservoir(name="Test", storage=0, capacity=100)
+        with pytest.raises(AttributeError):
+            reservoir.pools = Pools()  # type: ignore[misc]
+
+    def test_direct_assignment_to_mappings_raises_after_construction(self):
+        """Direct assignment to mappings raises AttributeError."""
+        reservoir = BaseReservoir(name="Test", storage=0, capacity=100)
+        with pytest.raises(AttributeError):
+            reservoir.mappings = Mappings()  # type: ignore[misc]
+
+    def test_direct_assignment_to_capacity_raises_after_construction(self):
+        """Direct assignment to capacity raises AttributeError."""
+        reservoir = BaseReservoir(name="Test", storage=0, capacity=100)
+        with pytest.raises(AttributeError):
+            reservoir.capacity = 200  # type: ignore[misc]
+
+    def test_storage_assignment_is_allowed(self):
+        """Storage remains mutable after construction."""
+        reservoir = BaseReservoir(name="Test", storage=0, capacity=100)
+        reservoir.storage = 42
+        assert reservoir.storage == 42
+
+    def test_add_outlets_still_works_after_freeze(self):
+        """add_outlets() is the sanctioned path and must work despite the freeze."""
+        reservoir = BaseReservoir(name="Test", storage=0, capacity=100)
+        outlet = outlet_factory(name="spillway", location=80.0)
+        reservoir.add_outlets(Outlets([outlet]))
+        assert len(reservoir.outlets) == 1
+
+    def test_add_pools_still_works_after_freeze(self):
+        """add_pools() is the sanctioned path and must work despite the freeze."""
+        reservoir = BaseReservoir(name="Test", storage=0, capacity=100)
+        pool = pool_factory(name="conservation", location=60.0)
+        reservoir.add_pools(Pools((pool,)))
+        assert len(reservoir.pools) == 1
+
+    def test_add_maps_still_works_after_freeze(self):
+        """add_maps() is the sanctioned path and must work despite the freeze."""
+        reservoir = BaseReservoir(name="Test", storage=0, capacity=100)
+        reservoir.add_maps(Mappings())
+        assert isinstance(reservoir.mappings, Mappings)
+
+    def test_add_operations_still_works_after_freeze(self):
+        """add_operations() is the sanctioned path and must work despite the freeze."""
+        reservoir = BaseReservoir(name="Test", storage=0, capacity=100)
+        reservoir.add_operations(PassiveOperations())
+        assert isinstance(reservoir.operations, PassiveOperations)
+
+
+class TestReservoirStorageMutation:
+    """Test that operate() advances storage correctly each timestep."""
+
+    def test_operate_advances_storage_no_outlets(self):
+        """operate() with no spill increments storage by inflow."""
+        reservoir = BaseReservoir(
+            name="Test", storage=50, capacity=100,
+            operations=PassiveOperations()
+        )
+        reservoir.operate(inflow=20)
+        assert reservoir.storage == 70
+
+    def test_operate_advances_storage_with_spill(self):
+        """operate() caps storage at capacity when inflow causes spill."""
+        reservoir = BaseReservoir(
+            name="Test", storage=90, capacity=100,
+            operations=PassiveOperations()
+        )
+        reservoir.operate(inflow=20)
+        assert reservoir.storage == 100
+
+    def test_operate_returns_spill_tuple_no_outlets(self):
+        """operate() returns a (spill,) tuple when no outlets are configured."""
+        reservoir = BaseReservoir(
+            name="Test", storage=90, capacity=100,
+            operations=PassiveOperations()
+        )
+        result = reservoir.operate(inflow=20)
+        # PassiveOperations always returns a tuple; (spill,) when no outlets
+        assert result == (10.0,)
+
+    def test_successive_operates_advance_storage(self):
+        """Multiple successive operate() calls correctly advance storage."""
+        reservoir = BaseReservoir(
+            name="Test", storage=0, capacity=100,
+            operations=PassiveOperations()
+        )
+        reservoir.operate(inflow=30)
+        assert reservoir.storage == 30
+        reservoir.operate(inflow=30)
+        assert reservoir.storage == 60
+        reservoir.operate(inflow=30)
+        assert reservoir.storage == 90
+
+
+class TestReservoirFactoryIndependence:
+    """Test that factory() produces independent instances."""
+
+    def test_factory_called_twice_returns_independent_operations(self):
+        """factory() called twice returns reservoirs with independent operations instances."""
+        r1 = factory()
+        r2 = factory()
+        assert r1.operations is not r2.operations
