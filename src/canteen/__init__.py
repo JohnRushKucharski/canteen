@@ -68,7 +68,6 @@ from canteen import operations, outlet, reservoir, pool, mapping as mapping_modu
 from canteen.operations import (
     Operations,
     PassiveOperations,
-    factory
 )
 from canteen.outlet import (
     BasicOutlet,
@@ -136,7 +135,4 @@ __all__ = [
     # Utility functions
     "build_interpolation_fx",
     "build_1D_interpolation_fxs",
-
-    # Factory function
-    "factory",
 ]
