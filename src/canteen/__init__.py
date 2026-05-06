@@ -151,10 +151,7 @@ __all__ = [
     # Utility functions
     "build_interpolation_fx",
     "build_1D_interpolation_fxs",
-<<<<<<< HEAD
-=======
 
     # Simulation
->>>>>>> 5892967 (fix(#20): Basic Simulation (No Outlets))
     "simulate",
 ]

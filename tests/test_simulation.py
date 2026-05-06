@@ -135,12 +135,12 @@ class TestSimulateOutletTracking:
     def test_simulate_with_single_outlet_includes_outlet_column(self):
         """Test that simulation with one outlet includes outlet release column."""
         from canteen import outlet
-        
+
         # Create reservoir with one outlet
         test_outlet = outlet.factory(name="MainGate", location=20.0)
         res = reservoir.factory(
-            name="Test", 
-            storage=50.0, 
+            name="Test",
+            storage=50.0,
             capacity=100.0,
             outlets=[test_outlet]
         )
@@ -156,7 +156,7 @@ class TestSimulateOutletTracking:
     def test_simulate_with_multiple_outlets_includes_all_outlet_columns(self):
         """Test that simulation with multiple outlets tracks each outlet separately."""
         from canteen import outlet
-        
+
         # Create reservoir with two outlets (sorted by location descending)
         outlet1 = outlet.factory(name="Upper", location=50.0)
         outlet2 = outlet.factory(name="Lower", location=20.0)
@@ -179,9 +179,14 @@ class TestSimulateOutletTracking:
     def test_simulate_records_correct_per_outlet_releases(self):
         """Test that per-outlet releases are recorded correctly."""
         from canteen import outlet
-        
+        from canteen.outlet import ReleaseRange
+
         # Create reservoir with known behavior
-        test_outlet = outlet.factory(name="Gate", location=30.0, max_release=15.0)
+        test_outlet = outlet.factory(
+            name="Gate",
+            location=30.0,
+            design_range=ReleaseRange(min=0.0, max=15.0)
+        )
         res = reservoir.factory(
             name="Test",
             storage=50.0,

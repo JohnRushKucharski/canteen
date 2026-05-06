@@ -39,16 +39,25 @@ def simulate(
     -------
     NDArray[np.void]
         Structured array with columns: timestep (int), inflow (float),
-        storage (float), spill (float). Returns empty array with correct
-        dtype when inflows is empty.
+        storage (float), one column per outlet (named by outlet), spill (float).
+        Returns empty array with correct dtype when inflows is empty.
     """
-    # Define result dtype
-    dtype = np.dtype([
+    # Extract outlet names from reservoir for dynamic columns
+    outlet_names = [outlet.name for outlet in reservoir.outlets]
+
+    # Build dtype dynamically: timestep, inflow, storage, [outlets...], spill
+    dtype_fields = [
         ('timestep', np.int32),
         ('inflow', np.float64),
         ('storage', np.float64),
-        ('spill', np.float64)
-    ])
+    ]
+    # Add one column per outlet
+    for outlet_name in outlet_names:
+        dtype_fields.append((outlet_name, np.float64))
+    # Add spill as the last column
+    dtype_fields.append(('spill', np.float64))
+
+    dtype = np.dtype(dtype_fields)
 
     # Handle empty inflows edge case
     if len(inflows) == 0:
@@ -69,6 +78,11 @@ def simulate(
         result[timestep]['timestep'] = timestep
         result[timestep]['inflow'] = inflow
         result[timestep]['storage'] = res_copy.storage
+
+        # Record per-outlet releases (all elements except the last, which is spill)
+        for i, outlet_name in enumerate(outlet_names):
+            result[timestep][outlet_name] = outflows[i]
+
         # Spill is always the last element of outflows tuple
         result[timestep]['spill'] = outflows[-1]
 
