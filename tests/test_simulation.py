@@ -127,3 +127,112 @@ class TestSimulateEdgeCases:
 
         assert len(result) == 3
         assert result['inflow'][0] == 10.0
+
+
+class TestSimulateOutletTracking:
+    """Test outlet release tracking in simulation results."""
+
+    def test_simulate_with_single_outlet_includes_outlet_column(self):
+        """Test that simulation with one outlet includes outlet release column."""
+        from canteen import outlet
+
+        # Create reservoir with one outlet
+        test_outlet = outlet.factory(name="MainGate", location=20.0)
+        res = reservoir.factory(
+            name="Test",
+            storage=50.0,
+            capacity=100.0,
+            outlets=[test_outlet]
+        )
+        inflows = [10.0, 20.0]
+
+        result = simulate(res, inflows)
+
+        # Should have outlet column between storage and spill
+        assert 'MainGate' in result.dtype.names
+        # Column order should be: timestep, inflow, storage, MainGate, spill
+        assert result.dtype.names == ('timestep', 'inflow', 'storage', 'MainGate', 'spill')
+
+    def test_simulate_with_multiple_outlets_includes_all_outlet_columns(self):
+        """Test that simulation with multiple outlets tracks each outlet separately."""
+        from canteen import outlet
+
+        # Create reservoir with two outlets (sorted by location descending)
+        outlet1 = outlet.factory(name="Upper", location=50.0)
+        outlet2 = outlet.factory(name="Lower", location=20.0)
+        res = reservoir.factory(
+            name="Test",
+            storage=80.0,
+            capacity=100.0,
+            outlets=[outlet1, outlet2]
+        )
+        inflows = [10.0, 20.0, 15.0]
+
+        result = simulate(res, inflows)
+
+        # Should have both outlet columns
+        assert 'Upper' in result.dtype.names
+        assert 'Lower' in result.dtype.names
+        # Column order: timestep, inflow, storage, Upper, Lower, spill
+        assert result.dtype.names == ('timestep', 'inflow', 'storage', 'Upper', 'Lower', 'spill')
+
+    def test_simulate_records_correct_per_outlet_releases(self):
+        """Test that per-outlet releases are recorded with exact expected values."""
+        from canteen import outlet
+        from canteen.outlet import ReleaseRange
+
+        # Reservoir: storage=50, capacity=100
+        # Gate at location=30.0, max release=15.0
+        test_outlet = outlet.factory(
+            name="Gate",
+            location=30.0,
+            design_range=ReleaseRange(min=0.0, max=15.0)
+        )
+        res = reservoir.factory(
+            name="Test",
+            storage=50.0,
+            capacity=100.0,
+            outlets=[test_outlet]
+        )
+        inflows = [20.0, 30.0]
+
+        result = simulate(res, inflows)
+
+        # Timestep 0: active=50+20=70, over_gate=40, Gate releases min(40,15)=15
+        #   storage = 50+20-15-0 = 55, spill = max(0, 55-100) = 0
+        assert result['Gate'][0] == 15.0
+        assert result['storage'][0] == 55.0
+        assert result['spill'][0] == 0.0
+
+        # Timestep 1: active=55+30=85, over_gate=55, Gate releases min(55,15)=15
+        #   storage = 55+30-15-0 = 70, spill = max(0, 70-100) = 0
+        assert result['Gate'][1] == 15.0
+        assert result['storage'][1] == 70.0
+        assert result['spill'][1] == 0.0
+
+    def test_simulate_with_zero_outlets_only_has_spill(self):
+        """Test that simulation with zero outlets works (regression test)."""
+        res = reservoir.factory(name="Test", storage=50.0, capacity=100.0)
+        inflows = [10.0, 20.0]
+
+        result = simulate(res, inflows)
+
+        # Should have standard columns only (no outlet columns)
+        assert result.dtype.names == ('timestep', 'inflow', 'storage', 'spill')
+        assert 'spill' in result.dtype.names
+
+    def test_simulate_raises_on_outlet_name_collision_with_reserved_column(self):
+        """Test that a ValueError is raised when an outlet name collides with reserved columns."""
+        import pytest
+        from canteen import outlet
+
+        for reserved in ('timestep', 'inflow', 'storage', 'spill'):
+            bad_outlet = outlet.factory(name=reserved, location=10.0)
+            res = reservoir.factory(
+                name="Test",
+                storage=50.0,
+                capacity=100.0,
+                outlets=[bad_outlet]
+            )
+            with pytest.raises(ValueError, match="conflict with reserved simulation columns"):
+                simulate(res, [10.0])

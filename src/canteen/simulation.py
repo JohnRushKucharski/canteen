@@ -13,6 +13,8 @@ from numpy.typing import NDArray
 
 from canteen.reservoir import Reservoir
 
+_RESERVED_COLUMNS: frozenset[str] = frozenset({'timestep', 'inflow', 'storage', 'spill'})
+
 
 def simulate(
     reservoir: Reservoir,
@@ -39,16 +41,33 @@ def simulate(
     -------
     NDArray[np.void]
         Structured array with columns: timestep (int), inflow (float),
-        storage (float), spill (float). Returns empty array with correct
-        dtype when inflows is empty.
+        storage (float), one column per outlet (named by outlet), spill (float).
+        Returns empty array with correct dtype when inflows is empty.
     """
-    # Define result dtype
-    dtype = np.dtype([
+    # Extract outlet names from reservoir for dynamic columns
+    outlet_names = [outlet.name for outlet in reservoir.outlets]
+
+    # Guard: outlet names must not collide with reserved column names
+    conflicts = _RESERVED_COLUMNS.intersection(outlet_names)
+    if conflicts:
+        raise ValueError(
+            f"Outlet name(s) conflict with reserved simulation columns: "
+            f"{sorted(conflicts)}. Reserved names are: {sorted(_RESERVED_COLUMNS)}."
+        )
+
+    # Build dtype dynamically: timestep, inflow, storage, [outlets...], spill
+    dtype_fields = [
         ('timestep', np.int32),
         ('inflow', np.float64),
         ('storage', np.float64),
-        ('spill', np.float64)
-    ])
+    ]
+    # Add one column per outlet
+    for outlet_name in outlet_names:
+        dtype_fields.append((outlet_name, np.float64))
+    # Add spill as the last column
+    dtype_fields.append(('spill', np.float64))
+
+    dtype = np.dtype(dtype_fields)
 
     # Handle empty inflows edge case
     if len(inflows) == 0:
@@ -69,6 +88,11 @@ def simulate(
         result[timestep]['timestep'] = timestep
         result[timestep]['inflow'] = inflow
         result[timestep]['storage'] = res_copy.storage
+
+        # Record per-outlet releases (all elements except the last, which is spill)
+        for i, outlet_name in enumerate(outlet_names):
+            result[timestep][outlet_name] = outflows[i]
+
         # Spill is always the last element of outflows tuple
         result[timestep]['spill'] = outflows[-1]
 
