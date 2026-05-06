@@ -97,6 +97,9 @@ from canteen.metadata import (
 from canteen.units import (
     Quantity
 )
+from canteen.simulation import (
+    simulate,
+)
 
 __version__ = "0.1.0"
 __all__ = [
@@ -135,4 +138,5 @@ __all__ = [
     # Utility functions
     "build_interpolation_fx",
     "build_1D_interpolation_fxs",
+    "simulate",
 ]
