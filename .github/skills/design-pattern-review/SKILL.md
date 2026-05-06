@@ -1,6 +1,7 @@
 ---
 name: design-pattern-review
 description: Use when reviewing a project's architecture for design pattern applicability -- either validating a design document before implementation, or analyzing an existing codebase for pattern improvement opportunities.
+user-invocable: false
 ---
 
 # Design Pattern Review
