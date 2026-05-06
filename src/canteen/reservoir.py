@@ -28,9 +28,9 @@ class Reservoir(Protocol):
     capacity: int|float
 
     operations: None|Operations
-    mappings: None|Mappings
-    pools: None|Pools
-    outlets: None|Outlets
+    mappings: Mappings
+    pools: Pools
+    outlets: Outlets
 
     def operate(
             self, inflow: int|float, *args: Any, **kwargs: Any
@@ -54,9 +54,9 @@ class BaseReservoir:
     capacity: int|float
     operations: None|Operations = None
 
-    mappings: None|Mappings = None
-    pools: None|Pools = None
-    outlets: None|Outlets = None
+    mappings: Mappings = None  # type: ignore  # Will be set in __post_init__
+    pools: Pools = None  # type: ignore  # Will be set in __post_init__
+    outlets: Outlets = None  # type: ignore  # Will be set in __post_init__
 
     def __post_init__(self) -> None:
         validate_is_not_negative(self.storage, "storage")
@@ -67,12 +67,12 @@ class BaseReservoir:
             object.__setattr__(self, 'pools', Pools())
         if self.mappings is None:
             object.__setattr__(self, 'mappings', Mappings())
-        if self.outlets and not self.is_outlets_less_than_capacity(self.outlets):
+        if len(self.outlets) > 0 and not self.is_outlets_less_than_capacity(self.outlets):
             raise ValueError(
                     f"""Invalid outlet location. Reservoir capacity: {self.capacity} must be
                     greater than outlet location.
                     Got outlets:{[f'{o.name}: {o.location}' for o in self.outlets]}.""")
-        if self.pools and not self.is_pools_less_than_capacity(self.pools):
+        if len(self.pools) > 0 and not self.is_pools_less_than_capacity(self.pools):
             raise ValueError(
                     f"""Invalid pool location. Reservoir capacity: {self.capacity} must be
                     greater than top of storage for upper pool.
@@ -99,14 +99,14 @@ class BaseReservoir:
 
     def add_maps(self, mappings: Mappings) -> Self:
         """Add mappings to the reservoir, modifying its state."""
-        if self.mappings:
+        if len(self.mappings) > 0:
             raise ValueError("Mappings already defined for reservoir.")
         object.__setattr__(self, 'mappings', mappings)
         return self
 
     def add_pools(self, pools: Pools) -> Self:
         """Add pools to the reservoir, modifying its state."""
-        if self.pools:
+        if len(self.pools) > 0:
             raise ValueError("Pools already defined for reservoir.")
         if not self.is_pools_less_than_capacity(pools):
             raise ValueError(
@@ -118,7 +118,7 @@ class BaseReservoir:
 
     def add_outlets(self, outlets: Outlets) -> Self:
         """Add outlets to the reservoir, modifying its state."""
-        if self.outlets:
+        if len(self.outlets) > 0:
             raise ValueError("Outlets already defined for reservoir.")
         if not self.is_outlets_less_than_capacity(outlets):
             raise ValueError(
@@ -147,7 +147,7 @@ class BaseReservoir:
 
     def __repr__(self) -> str:
         """String representation of the reservoir."""
-        outlet_names = [o.name for o in self.outlets] if self.outlets else []
+        outlet_names = [o.name for o in self.outlets] if len(self.outlets) > 0 else []
         base_repr = (
             f"{self.__class__.__name__}("
             f"name='{self.name}', "
@@ -169,7 +169,7 @@ def factory(name: str = "reservoir", storage: int|float = 0, capacity: int|float
         storage=storage,
         capacity=capacity,
         operations=operations if operations is not None else PassiveOperations(),
-        outlets=outlets,
-        pools=pools,
-        mappings=mappings
+        outlets=outlets if outlets is not None else Outlets(),
+        pools=pools if pools is not None else Pools(),
+        mappings=mappings if mappings is not None else Mappings()
     )
