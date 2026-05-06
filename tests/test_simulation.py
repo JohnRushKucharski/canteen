@@ -177,11 +177,12 @@ class TestSimulateOutletTracking:
         assert result.dtype.names == ('timestep', 'inflow', 'storage', 'Upper', 'Lower', 'spill')
 
     def test_simulate_records_correct_per_outlet_releases(self):
-        """Test that per-outlet releases are recorded correctly."""
+        """Test that per-outlet releases are recorded with exact expected values."""
         from canteen import outlet
         from canteen.outlet import ReleaseRange
 
-        # Create reservoir with known behavior
+        # Reservoir: storage=50, capacity=100
+        # Gate at location=30.0, max release=15.0
         test_outlet = outlet.factory(
             name="Gate",
             location=30.0,
@@ -197,11 +198,17 @@ class TestSimulateOutletTracking:
 
         result = simulate(res, inflows)
 
-        # Check that outlet releases are recorded (values depend on operations)
-        # Just verify columns exist and contain numeric data
-        assert 'Gate' in result.dtype.names
-        assert result['Gate'][0] >= 0.0
-        assert result['Gate'][1] >= 0.0
+        # Timestep 0: active=50+20=70, over_gate=40, Gate releases min(40,15)=15
+        #   storage = 50+20-15-0 = 55, spill = max(0, 55-100) = 0
+        assert result['Gate'][0] == 15.0
+        assert result['storage'][0] == 55.0
+        assert result['spill'][0] == 0.0
+
+        # Timestep 1: active=55+30=85, over_gate=55, Gate releases min(55,15)=15
+        #   storage = 55+30-15-0 = 70, spill = max(0, 70-100) = 0
+        assert result['Gate'][1] == 15.0
+        assert result['storage'][1] == 70.0
+        assert result['spill'][1] == 0.0
 
     def test_simulate_with_zero_outlets_only_has_spill(self):
         """Test that simulation with zero outlets works (regression test)."""
