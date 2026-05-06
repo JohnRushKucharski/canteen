@@ -47,7 +47,7 @@ Simulation
     
     results = simulate(res, inflows)
     # results is a numpy structured array with columns:
-    # timestep, inflow, storage, spill
+    # timestep, inflow, storage, one column per outlet, spill
 
 Builder Pattern
 ---------------
