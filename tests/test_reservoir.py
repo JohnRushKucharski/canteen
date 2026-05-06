@@ -148,6 +148,63 @@ class TestReservoirWithOutlets:
         with pytest.raises(ValueError, match="Outlets already defined"):
             reservoir.add_outlets(outlets)
 
+
+class TestNullObjectDefaults:
+    """Test that optional components default to empty containers, never None (ADR-0003)."""
+
+    def test_reservoir_without_args_defaults_to_empty_containers(self):
+        """BaseReservoir with no outlets/pools/mappings args defaults to empty containers."""
+        reservoir = BaseReservoir(name="Minimal", storage=0, capacity=100)
+
+        # Should be empty containers, not None
+        assert reservoir.outlets is not None
+        assert isinstance(reservoir.outlets, Outlets)
+        assert len(reservoir.outlets) == 0
+
+        assert reservoir.pools is not None
+        assert isinstance(reservoir.pools, Pools)
+        assert len(reservoir.pools) == 0
+
+        assert reservoir.mappings is not None
+        assert isinstance(reservoir.mappings, Mappings)
+        assert len(reservoir.mappings) == 0
+
+    def test_empty_outlets_are_iterable(self):
+        """Empty Outlets container is iterable and produces zero iterations."""
+        reservoir = BaseReservoir(name="Test", storage=0, capacity=100)
+
+        count = 0
+        for _ in reservoir.outlets:
+            count += 1
+
+        assert count == 0
+
+    def test_empty_pools_are_iterable(self):
+        """Empty Pools container is iterable and produces zero iterations."""
+        reservoir = BaseReservoir(name="Test", storage=0, capacity=100)
+
+        count = 0
+        for _ in reservoir.pools:
+            count += 1
+
+        assert count == 0
+
+    def test_passive_operations_work_with_empty_outlets(self):
+        """PassiveOperations should work without defensive None checks on empty outlets."""
+        reservoir = BaseReservoir(
+            name="Test",
+            storage=50,
+            capacity=100,
+            operations=PassiveOperations()
+        )
+
+        # Should return only spill, no None checks needed
+        outflows = reservoir.operate(inflow=60)
+
+        # storage (50) + inflow (60) = 110 > capacity (100), so spill = 10
+        assert outflows == (10.0,)
+        assert reservoir.storage == 100
+
     def test_multiple_outlets_one_exceeds_capacity_raises_error(self):
         """Test that if any outlet exceeds capacity, error is raised."""
         outlet1 = outlet_factory(name="low_level", location=50.0)

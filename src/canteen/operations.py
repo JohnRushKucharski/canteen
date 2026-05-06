@@ -82,23 +82,19 @@ class PassiveOperations:
             Returns (spill,) when no outlets are defined.
         """
         active_storage = reservoir.storage + inflow
-        if reservoir.outlets:
-            outflows: list[int|float] = []
-            for outlet in reservoir.outlets:
-                outflows.append(inc_outflow := outlet.operations(active_storage).max)
-                active_storage -= inc_outflow
-            outflows.append(max(0.0, active_storage - reservoir.capacity))
-            return tuple(outflows)
-        return (max(0.0, active_storage - reservoir.capacity),)
+        outflows: list[int|float] = []
+        for outlet in reservoir.outlets:
+            outflows.append(inc_outflow := outlet.operations(active_storage).max)
+            active_storage -= inc_outflow
+        outflows.append(max(0.0, active_storage - reservoir.capacity))
+        return tuple(outflows)
 
     def output_labels(self, reservoir: Reservoir) -> tuple[str, ...]:
         """
         Get output labels matching the tuple returned by operate().
         """
-        if reservoir.outlets:
-            outlet_labels = [outlet.name for outlet in reservoir.outlets]
-            return tuple(outlet_labels + ['Spill'])
-        return ("Spill",)
+        outlet_labels = [outlet.name for outlet in reservoir.outlets]
+        return tuple(outlet_labels + ['Spill'])
 
     def __repr__(self) -> str:
         """String representation."""

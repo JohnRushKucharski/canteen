@@ -49,7 +49,7 @@ A volume → elevation (or elevation → volume) relationship stored as a `Mappi
 _Avoid_: Stage-storage curve
 
 **Operations**:
-A strategy object (Strategy pattern) that computes outflows from a reservoir given its current state and an inflow. Pure computation — takes reservoir state in, returns a tuple of outflows. `BaseReservoir` is the context; `Operations` is the strategy interface. `BaseReservoir.operate()` owns the mutation of `self.storage` after calling the strategy.
+A strategy object (Strategy pattern) that computes outflows from a reservoir given its current state and an inflow. Pure computation — takes reservoir state in, returns a tuple of outflows. `BaseReservoir` is the Strategy pattern context; `Operations` is the strategy interface. `BaseReservoir.operate(inflow)` calls the strategy to get outflows, then mutates `self.storage = storage + inflow - sum(outflows)`.
 _Avoid_: Policy (reserve for `StandardOperatingPolicy` specifically), rules
 
 **Physical Infrastructure**:
@@ -59,12 +59,28 @@ _Avoid_: Physical state, hardware
 **Management Policy**:
 The `Operations` strategy attached to a reservoir. Can change between simulation runs without any physical change to the reservoir. The sanctioned swap point in the Strategy pattern. Frozen per simulation run.
 
+**ReservoirBuilder**:
+A builder class that accumulates reservoir components (operations, outlets, pools, mappings) and validates completeness before constructing an immutable `BaseReservoir` via `build()`. Ensures invalid reservoir states are unrepresentable. The factory function uses the builder internally.
+_Avoid_: Constructor, factory (reserve for the convenience function)
+
 **Passive Operations**:
 The default `Operations` strategy. Makes maximum releases through all outlets in order from highest to lowest location, then spills any remaining volume above capacity. No demand target.
 _Avoid_: Uncontrolled, gravity operations
 
 **Standard Operating Policy (SOP)**:
 A planned `Operations` strategy that meets a demand target, releases through pools in priority order, and spills only when necessary. Not yet implemented.
+
+**Simulation**:
+The orchestration layer that runs a reservoir through multiple timesteps given a sequence of inflows. Copies the reservoir internally, calls `operate(inflow)` for each timestep, and records storage and outflow states. Returns results as a numpy structured array.
+_Avoid_: Run, execution, loop
+
+**Timestep**:
+A discrete computational step in a simulation, identified by an integer index (0, 1, 2, ...). Optional timestamps (dates) can be provided for labeling but are not required for execution.
+_Avoid_: Step, iteration, period
+
+**Metric**:
+A read-only observer that extracts or computes additional values during simulation for recording (e.g., water surface elevation, active pool state, total outflow). Metrics extend the result schema beyond the MVP columns (timestep, inflow, storage, outlet releases, spill). Not yet implemented.
+_Avoid_: Recorder, calculator, derived value
 
 **Mapping**:
 A named functional relationship (`f(x) → y`) with an optional inverse. The extension point for attaching domain-specific behavior to components. Stored in a `Mappings` bag keyed by name (e.g. `"rating_curve"`, `"evaporation"`, `"location"`).
@@ -76,11 +92,14 @@ _Avoid_: Map, dictionary, config
 
 ## Relationships
 
-- A **Reservoir** has exactly one **Operations** strategy, zero or more **Outlets**, zero or more **Pools**, and zero or more **Mappings**
+- A **Reservoir** has exactly one **Operations** strategy (required), zero or more **Outlets**, zero or more **Pools**, and zero or more **Mappings**
+- **ReservoirBuilder** constructs **Reservoir** instances; validates that operations is defined and all components are valid
 - **Outlets** are sorted highest-to-lowest location; **Pools** are sorted highest-to-lowest location
-- `operate(inflow)` calls the **Operations** strategy → returns **Outflow** tuple → `BaseReservoir` updates **Storage**
+- `Reservoir.operate(inflow)` calls the **Operations** strategy → gets **Outflow** tuple → mutates `self.storage = storage + inflow - sum(outflows)` → returns outflows
+- **Simulation** copies a **Reservoir**, calls `operate(inflow)` for each **Timestep**, and records results
 - A **Pool** location may be fixed (**StaticPool**) or time-varying via a **Rule Curve** (**VariablePool**)
 - A **ReleaseRange** is computed per-timestep by an **Outlet** from fill state; it is not stored
+- **Metrics** observe **Reservoir** state after each `operate()` call and return computed values for recording (future enhancement)
 
 **Null Object**:
 An empty-but-valid instance of a container component (`Outlets`, `Pools`, `Mappings`) that holds zero elements. Used in place of `None` for optional reservoir components so that strategies can iterate and query components without defensive `None` checks. Default value for `outlets`, `pools`, and `mappings` on all reservoir instances.
