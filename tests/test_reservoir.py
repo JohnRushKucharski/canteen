@@ -205,6 +205,132 @@ class TestNullObjectDefaults:
         assert outflows == (10.0,)
         assert reservoir.storage == 100
 
+
+class TestReservoirBuilder:
+    """Test ReservoirBuilder pattern for construction (issue #19)."""
+
+    def test_builder_fluent_api_accumulates_operations(self):
+        """Builder accumulates operations via fluent interface."""
+        from canteen.reservoir import ReservoirBuilder
+        
+        builder = ReservoirBuilder(name="Test", storage=50, capacity=100)
+        result = builder.add_operations(PassiveOperations())
+        
+        assert result is builder  # Returns self for chaining
+        
+    def test_builder_fluent_api_accumulates_outlets(self):
+        """Builder accumulates outlets via fluent interface."""
+        from canteen.reservoir import ReservoirBuilder
+        
+        outlet = outlet_factory(name="spillway", location=80.0)
+        outlets = Outlets([outlet])
+        
+        builder = ReservoirBuilder(name="Test", storage=50, capacity=100)
+        result = builder.add_outlets(outlets)
+        
+        assert result is builder  # Returns self for chaining
+        
+    def test_builder_fluent_api_accumulates_pools(self):
+        """Builder accumulates pools via fluent interface."""
+        from canteen.reservoir import ReservoirBuilder
+        
+        pool = pool_factory(name="conservation", location=75.0)
+        pools = Pools((pool,))
+        
+        builder = ReservoirBuilder(name="Test", storage=50, capacity=100)
+        result = builder.add_pools(pools)
+        
+        assert result is builder  # Returns self for chaining
+        
+    def test_builder_fluent_api_accumulates_mappings(self):
+        """Builder accumulates mappings via fluent interface."""
+        from canteen.reservoir import ReservoirBuilder
+        
+        mapping = ratingcurve_factory(xs=[0, 100], ys=[0, 10])
+        mappings = Mappings([mapping])
+        
+        builder = ReservoirBuilder(name="Test", storage=50, capacity=100)
+        result = builder.add_mappings(mappings)
+        
+        assert result is builder  # Returns self for chaining
+
+    def test_build_without_operations_raises_error(self):
+        """Builder.build() raises ValueError when operations not set."""
+        from canteen.reservoir import ReservoirBuilder
+        
+        builder = ReservoirBuilder(name="Test", storage=50, capacity=100)
+        
+        with pytest.raises(ValueError, match="Operations must be set"):
+            builder.build()
+            
+    def test_build_with_operations_creates_reservoir(self):
+        """Builder.build() creates BaseReservoir when operations set."""
+        from canteen.reservoir import ReservoirBuilder
+        
+        builder = ReservoirBuilder(name="Test", storage=50, capacity=100)
+        builder.add_operations(PassiveOperations())
+        
+        reservoir = builder.build()
+        
+        assert isinstance(reservoir, BaseReservoir)
+        assert reservoir.name == "Test"
+        assert reservoir.storage == 50
+        assert reservoir.capacity == 100
+        assert reservoir.operations is not None
+        
+    def test_build_creates_reservoir_with_all_components(self):
+        """Builder.build() creates reservoir with all accumulated components."""
+        from canteen.reservoir import ReservoirBuilder
+        
+        outlet = outlet_factory(name="spillway", location=80.0)
+        outlets = Outlets([outlet])
+        pool = pool_factory(name="conservation", location=75.0)
+        pools = Pools((pool,))
+        mapping = ratingcurve_factory(xs=[0, 100], ys=[0, 10])
+        mappings = Mappings([mapping])
+        
+        builder = (ReservoirBuilder(name="Test", storage=50, capacity=100)
+                   .add_operations(PassiveOperations())
+                   .add_outlets(outlets)
+                   .add_pools(pools)
+                   .add_mappings(mappings))
+        
+        reservoir = builder.build()
+        
+        assert reservoir.outlets == outlets
+        assert reservoir.pools == pools
+        assert reservoir.mappings == mappings
+        
+    def test_factory_uses_builder_internally(self):
+        """Factory function creates reservoir via builder pattern."""
+        # Factory should set PassiveOperations by default if none provided
+        reservoir = factory(name="Test", storage=50, capacity=100)
+        
+        assert isinstance(reservoir, BaseReservoir)
+        assert reservoir.name == "Test"
+        assert reservoir.storage == 50
+        assert reservoir.capacity == 100
+        assert reservoir.operations is not None
+        assert isinstance(reservoir.operations, PassiveOperations)
+        
+    def test_factory_with_components_uses_builder(self):
+        """Factory with components passes them through builder."""
+        outlet = outlet_factory(name="spillway", location=80.0)
+        outlets = Outlets([outlet])
+        pool = pool_factory(name="conservation", location=75.0)
+        pools = Pools((pool,))
+        
+        reservoir = factory(
+            name="Test",
+            storage=50,
+            capacity=100,
+            outlets=outlets,
+            pools=pools
+        )
+        
+        assert reservoir.outlets == outlets
+        assert reservoir.pools == pools
+
     def test_multiple_outlets_one_exceeds_capacity_raises_error(self):
         """Test that if any outlet exceeds capacity, error is raised."""
         outlet1 = outlet_factory(name="low_level", location=50.0)

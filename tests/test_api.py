@@ -5,7 +5,7 @@ import pytest
 import canteen
 from canteen import (
     operations, reservoir, outlet, pool,
-    BaseReservoir, Outlets, Pools,
+    Outlets, Pools,
 )
 from canteen.operations import PassiveOperations
 
@@ -81,26 +81,33 @@ class TestBuilderPatternAPI:
 
     def test_builder_incremental_construction(self):
         """Test step-by-step builder pattern."""
-        # Create base reservoir
-        res = BaseReservoir(name="Builder Dam", storage=50.0, capacity=100.0)
-        assert res.operations is None
-        assert len(res.outlets) == 0  # Null Object — empty but never None (ADR-0003)
-
+        from canteen.reservoir import ReservoirBuilder
+        
+        # Create builder
+        builder = ReservoirBuilder(name="Builder Dam", storage=50.0, capacity=100.0)
+        
         # Add operations
-        res.add_operations(operations.factory())
-        assert res.operations is not None
-
+        builder.add_operations(operations.factory())
+        
         # Add outlets
-        res.add_outlets(Outlets((outlet.factory(name="Gate", location=80.0),)))
+        builder.add_outlets(Outlets((outlet.factory(name="Gate", location=80.0),)))
+        
+        # Build reservoir
+        res = builder.build()
+        
+        assert res.operations is not None
         assert res.outlets is not None
         assert len(res.outlets) == 1
 
     def test_builder_chained_construction(self):
         """Test fluent chained builder pattern."""
-        res = (BaseReservoir(name="Chained Dam", storage=50.0, capacity=100.0)
+        from canteen.reservoir import ReservoirBuilder
+        
+        res = (ReservoirBuilder(name="Chained Dam", storage=50.0, capacity=100.0)
             .add_operations(operations.factory())
             .add_outlets(Outlets((outlet.factory(name="Spillway", location=95.0),)))
-            .add_pools(Pools((pool.factory(name="Storage", location=90.0),))))
+            .add_pools(Pools((pool.factory(name="Storage", location=90.0),)))
+            .build())
 
         assert res.name == "Chained Dam"
         assert res.operations is not None
@@ -108,20 +115,29 @@ class TestBuilderPatternAPI:
         assert res.pools is not None
 
     def test_builder_prevents_duplicate_operations(self):
-        """Test that builder prevents adding operations twice."""
-        res = BaseReservoir(name="Test", storage=50.0, capacity=100.0)
-        res.add_operations(operations.factory())
-
-        with pytest.raises(ValueError, match="Operations already defined"):
-            res.add_operations(operations.factory())
+        """Test that builder validates operations is required."""
+        from canteen.reservoir import ReservoirBuilder
+        
+        builder = ReservoirBuilder(name="Test", storage=50.0, capacity=100.0)
+        
+        # Should raise error if build() called without operations
+        with pytest.raises(ValueError, match="Operations must be set"):
+            builder.build()
 
     def test_builder_prevents_duplicate_outlets(self):
-        """Test that builder prevents adding outlets twice."""
-        res = BaseReservoir(name="Test", storage=50.0, capacity=100.0)
-        res.add_outlets(Outlets((outlet.factory(name="Gate", location=80.0),)))
-
-        with pytest.raises(ValueError, match="Outlets already defined"):
-            res.add_outlets(Outlets((outlet.factory(name="Other", location=70.0),)))
+        """Test that builder allows replacing components before build."""
+        from canteen.reservoir import ReservoirBuilder
+        
+        builder = ReservoirBuilder(name="Test", storage=50.0, capacity=100.0)
+        builder.add_operations(operations.factory())
+        
+        # Builder allows replacing outlets before build()
+        builder.add_outlets(Outlets((outlet.factory(name="Gate", location=80.0),)))
+        builder.add_outlets(Outlets((outlet.factory(name="Other", location=70.0),)))
+        
+        res = builder.build()
+        assert len(res.outlets) == 1
+        assert res.outlets[0].name == "Other"
 
 class TestModuleFactories:
     """Test individual module factory functions."""
@@ -171,19 +187,20 @@ class TestDocstringExamples:
 
     def test_builder_pattern_chained_example(self):
         """Test chained builder pattern from __init__.py docstring."""
-        # Create base reservoir
-        res = BaseReservoir(name="Dam", storage=50.0, capacity=100.0)
-
-        # Add components using builder methods (chainable)
-        res.add_operations(operations.factory()) \
+        from canteen.reservoir import ReservoirBuilder
+        
+        # Create reservoir using builder with chained calls
+        res = (ReservoirBuilder(name="Dam", storage=50.0, capacity=100.0)
+           .add_operations(operations.factory())
            .add_outlets(Outlets((
                outlet.factory(name="Spillway", location=95.0),
                outlet.factory(name="Gate", location=80.0)
-           ))) \
+           )))
            .add_pools(Pools((
                pool.factory(name="Flood", location=95.0),
                pool.factory(name="Conservation", location=85.0)
            )))
+           .build())
 
         assert res.name == "Dam"
         assert res.operations is not None
@@ -196,10 +213,13 @@ class TestDocstringExamples:
 
     def test_builder_pattern_stepwise_example(self):
         """Test step-by-step builder pattern from __init__.py docstring."""
-        # Or add components step by step
-        res2 = BaseReservoir(name="Another Dam", storage=25.0, capacity=50.0)
-        res2.add_operations(operations.factory())
-        res2.add_outlets(Outlets((outlet.factory(name="Outlet", location=45.0),)))
+        from canteen.reservoir import ReservoirBuilder
+        
+        # Add components step by step
+        builder = ReservoirBuilder(name="Another Dam", storage=25.0, capacity=50.0)
+        builder.add_operations(operations.factory())
+        builder.add_outlets(Outlets((outlet.factory(name="Outlet", location=45.0),)))
+        res2 = builder.build()
 
         assert res2.name == "Another Dam"
         assert res2.operations is not None
