@@ -109,7 +109,7 @@ __all__ = [
     "metadata",
 
     # Protocols
-    "Operations", 
+    "Operations",
     "Outlet",
     "Reservoir",
     "Pool",

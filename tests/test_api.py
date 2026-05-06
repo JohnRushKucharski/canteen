@@ -82,19 +82,19 @@ class TestBuilderPatternAPI:
     def test_builder_incremental_construction(self):
         """Test step-by-step builder pattern."""
         from canteen.reservoir import ReservoirBuilder
-        
+
         # Create builder
         builder = ReservoirBuilder(name="Builder Dam", storage=50.0, capacity=100.0)
-        
+
         # Add operations
         builder.add_operations(operations.factory())
-        
+
         # Add outlets
         builder.add_outlets(Outlets((outlet.factory(name="Gate", location=80.0),)))
-        
+
         # Build reservoir
         res = builder.build()
-        
+
         assert res.operations is not None
         assert res.outlets is not None
         assert len(res.outlets) == 1
@@ -102,7 +102,7 @@ class TestBuilderPatternAPI:
     def test_builder_chained_construction(self):
         """Test fluent chained builder pattern."""
         from canteen.reservoir import ReservoirBuilder
-        
+
         res = (ReservoirBuilder(name="Chained Dam", storage=50.0, capacity=100.0)
             .add_operations(operations.factory())
             .add_outlets(Outlets((outlet.factory(name="Spillway", location=95.0),)))
@@ -117,9 +117,9 @@ class TestBuilderPatternAPI:
     def test_builder_prevents_duplicate_operations(self):
         """Test that builder validates operations is required."""
         from canteen.reservoir import ReservoirBuilder
-        
+
         builder = ReservoirBuilder(name="Test", storage=50.0, capacity=100.0)
-        
+
         # Should raise error if build() called without operations
         with pytest.raises(ValueError, match="Operations must be set"):
             builder.build()
@@ -127,14 +127,14 @@ class TestBuilderPatternAPI:
     def test_builder_prevents_duplicate_outlets(self):
         """Test that builder allows replacing components before build."""
         from canteen.reservoir import ReservoirBuilder
-        
+
         builder = ReservoirBuilder(name="Test", storage=50.0, capacity=100.0)
         builder.add_operations(operations.factory())
-        
+
         # Builder allows replacing outlets before build()
         builder.add_outlets(Outlets((outlet.factory(name="Gate", location=80.0),)))
         builder.add_outlets(Outlets((outlet.factory(name="Other", location=70.0),)))
-        
+
         res = builder.build()
         assert len(res.outlets) == 1
         assert res.outlets[0].name == "Other"
@@ -188,7 +188,7 @@ class TestDocstringExamples:
     def test_builder_pattern_chained_example(self):
         """Test chained builder pattern from __init__.py docstring."""
         from canteen.reservoir import ReservoirBuilder
-        
+
         # Create reservoir using builder with chained calls
         res = (ReservoirBuilder(name="Dam", storage=50.0, capacity=100.0)
            .add_operations(operations.factory())
@@ -214,7 +214,7 @@ class TestDocstringExamples:
     def test_builder_pattern_stepwise_example(self):
         """Test step-by-step builder pattern from __init__.py docstring."""
         from canteen.reservoir import ReservoirBuilder
-        
+
         # Add components step by step
         builder = ReservoirBuilder(name="Another Dam", storage=25.0, capacity=50.0)
         builder.add_operations(operations.factory())

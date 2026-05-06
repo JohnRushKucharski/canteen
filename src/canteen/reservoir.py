@@ -172,10 +172,10 @@ def factory(name: str = "reservoir", storage: int|float = 0, capacity: int|float
     while maintaining the builder pattern's guarantees.
     """
     builder = ReservoirBuilder(name=name, storage=storage, capacity=capacity)
-    
+
     # Add operations (required, defaults to PassiveOperations)
     builder.add_operations(operations if operations is not None else PassiveOperations())
-    
+
     # Add optional components if provided
     if outlets is not None:
         builder.add_outlets(outlets)
@@ -183,7 +183,7 @@ def factory(name: str = "reservoir", storage: int|float = 0, capacity: int|float
         builder.add_pools(pools)
     if mappings is not None:
         builder.add_mappings(mappings)
-    
+
     return builder.build()
 
 
@@ -301,7 +301,7 @@ class ReservoirBuilder:
         """
         if self._operations is None:
             raise ValueError("Operations must be set before building reservoir.")
-        
+
         return BaseReservoir(
             name=self._name,
             storage=self._storage,
