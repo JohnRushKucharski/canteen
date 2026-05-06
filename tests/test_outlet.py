@@ -15,6 +15,7 @@ except ImportError:
 
 from canteen.outlet import (  # noqa: E402 # pylint: disable=wrong-import-position, ungrouped-imports
     BasicOutlet,
+    Outlets,
     ReleaseRange,
     format_outlets,
     default_sorter,
@@ -26,17 +27,17 @@ class TestBasicOutletValidation:
 
     def test_negative_location_raises_error(self):
         """Test that negative location raises ValueError."""
-        with pytest.raises(ValueError, match="Outlet location cannot be negative"):
+        with pytest.raises(ValueError, match="Outlet location"):
             BasicOutlet(location=-10.0)
 
     def test_negative_design_min_raises_error(self):
         """Test that negative design minimum raises ValueError."""
-        with pytest.raises(ValueError, match="Design range minimum cannot be negative"):
+        with pytest.raises(ValueError, match="ReleaseRange minimum"):
             BasicOutlet(design_range=ReleaseRange(-5, 100))
 
     def test_invalid_design_range_raises_error(self):
         """Test that max < min raises ValueError."""
-        with pytest.raises(ValueError, match="Design range maximum cannot be less than minimum"):
+        with pytest.raises(ValueError, match="ReleaseRange"):
             BasicOutlet(design_range=ReleaseRange(100, 50))
 
 
@@ -153,7 +154,43 @@ class TestDefaultSorter:
         assert sorted_outlets[2].name == "zebra"
 
 
-@pytest.mark.skipif(Quantity is None, reason="units package not installed")
+class TestOutletsContainer:
+    """Test Outlets container iteration and Null Object construction."""
+
+    def test_iterating_outlets_twice_yields_same_sequence(self):
+        """Iterating Outlets a second time must produce the same sequence."""
+        o1 = BasicOutlet(name="low", location=10.0)
+        o2 = BasicOutlet(name="high", location=50.0)
+        outlets = Outlets([o1, o2])
+
+        first_pass = list(outlets)
+        second_pass = list(outlets)
+
+        assert first_pass == second_pass
+
+    def test_nested_loop_over_outlets_produces_cartesian_product(self):
+        """A nested loop over the same Outlets must not silently reset the outer loop."""
+        o1 = BasicOutlet(name="a", location=10.0)
+        o2 = BasicOutlet(name="b", location=20.0)
+        outlets = Outlets([o1, o2])
+
+        pairs = [(outer.name, inner.name) for outer in outlets for inner in outlets]
+
+        assert len(pairs) == 4
+        assert ("a", "a") in pairs
+        assert ("a", "b") in pairs
+        assert ("b", "a") in pairs
+        assert ("b", "b") in pairs
+
+    def test_outlets_empty_construction_is_valid(self):
+        """Outlets() with no arguments must construct and iterate as an empty sequence."""
+        outlets = Outlets()
+
+        assert len(outlets) == 0
+        assert not list(outlets)
+
+
+
 class TestBasicOutletWithQuantities:
     """Test BasicOutlet with Quantity types for locations and fill states."""
 

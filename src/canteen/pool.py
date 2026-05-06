@@ -6,7 +6,7 @@ modeling storage pools within reservoirs with generic numeric types.
 Supports both static and dynamic pool location definitions.
 """
 from typing import Protocol, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from canteen.metadata import MetaDataPlusRange
 from canteen.mapping import Mappings, constantmapping_factory, rulecurve_factory
@@ -30,27 +30,16 @@ class Pool(Protocol):
 @dataclass
 class Pools:
     """Container for multiple Pool instances with iteration support."""
-    pools: tuple[Pool, ...]
+    pools: tuple[Pool, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         sorted_pools = sorted(self.pools, key=lambda p: p.location(), reverse=True)
         # Pools sorted top to bottom (descending location)
         self.pools = tuple(sorted_pools)
-        # Initialize iteration index
-        self._index = 0
 
     def __iter__(self):
-        """Return iterator starting from top (highest location) pool."""
-        self._index = 0
-        return self
-
-    def __next__(self) -> Pool:
-        """Return next pool going from top to bottom."""
-        if self._index < len(self.pools):
-            pool = self.pools[self._index]
-            self._index += 1
-            return pool
-        raise StopIteration
+        """Return a fresh iterator over pools (highest to lowest location)."""
+        return iter(self.pools)
 
     def __len__(self) -> int:
         """Return number of pools."""

@@ -30,6 +30,9 @@ class ReleaseRange:
 
     def check_units(self) -> None:
         '''Validate that min and max are of the same type (both numeric or both Quantity).'''
+        # units package not installed, nothing to check.
+        if Quantity is None:
+            return
         # both are not quantities, no need to check units.
         if not isinstance(self.min, Quantity) and not isinstance(self.max, Quantity):
             return
@@ -180,33 +183,23 @@ def factory(
 class Outlets:
     """Container for multiple Outlet instances with iteration support."""
 
-    def __init__(self, outlets: list[Outlet]|tuple[Outlet,...],
+    def __init__(self, outlets: list[Outlet]|tuple[Outlet,...] = (),
                  sorter: None|Callable[[list[Outlet]|tuple[Outlet,...]], tuple[Outlet,...]]=None
                  )->None:
-        self._index = 0  # Initialize iteration index
         outlets = format_outlets(outlets)
         sorter = sorter if sorter is not None else default_sorter
         self.outlets = sorter(outlets)
 
     def __iter__(self):
-        """Return iterator starting from lowest location outlet."""
-        self._index = 0
-        return self
-
-    def __next__(self) -> Outlet:
-        """Return next outlet going from lowest to highest location."""
-        if self._index < len(self.outlets):
-            outlet = self.outlets[self._index]
-            self._index += 1
-            return outlet
-        raise StopIteration
+        """Return a fresh iterator over outlets (highest to lowest location)."""
+        return iter(self.outlets)
 
     def __len__(self) -> int:
         """Return number of outlets."""
         return len(self.outlets)
 
     def __getitem__(self, index: int) -> Outlet:
-        """Allow indexing: outlets[0] returns lowest location outlet."""
+        """Allow indexing: outlets[0] returns highest location outlet."""
         return self.outlets[index]
 
 def default_sorter(outlets: Sequence[Outlet]) -> tuple[Outlet, ...]:
