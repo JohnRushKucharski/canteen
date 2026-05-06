@@ -36,6 +36,19 @@ Basic Usage
     # Operate the reservoir
     spill = res.operate(inflow=50.0)
 
+Simulation
+----------
+    # Simulate reservoir over multiple timesteps
+    from canteen import simulate
+    import numpy as np
+    
+    res = reservoir.factory(name="Dam", storage=50.0, capacity=100.0)
+    inflows = [10.0, 20.0, 30.0, 15.0]
+    
+    results = simulate(res, inflows)
+    # results is a numpy structured array with columns:
+    # timestep, inflow, storage, spill
+
 Builder Pattern
 ---------------
     # Reservoirs support fluent builder pattern for incremental construction
@@ -138,5 +151,10 @@ __all__ = [
     # Utility functions
     "build_interpolation_fx",
     "build_1D_interpolation_fxs",
+<<<<<<< HEAD
+=======
+
+    # Simulation
+>>>>>>> 5892967 (fix(#20): Basic Simulation (No Outlets))
     "simulate",
 ]
