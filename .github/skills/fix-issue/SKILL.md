@@ -21,11 +21,11 @@ gh issue list --label ready-for-agent --state open \
   --jq '[.[] | {number, title, body, labels: [.labels[].name]}]'
 ```
 
-### 2. Filter AFK
+> **If `gh` is not available**: use the `github-pull-request_doSearch` tool with query `is:issue is:open label:ready-for-agent repo:owner/name`. Always include the `repo:` qualifier — the tool searches all repos by default. See `docs/agents/issue-tracker.md` for the full fallback table.
 
-For each issue, parse the `## Type` section of the body. Keep only issues where the value is exactly `AFK`. Skip `HITL` issues — they require human decisions you cannot make.
+All issues returned by this query are AFK by definition — `ready-for-agent` means AFK (see `docs/agents/triage-labels.md`).
 
-### 3. Verify no unresolved blockers
+### 2. Verify no unresolved blockers
 
 For each candidate, parse the `## Blocked by` section. For every issue number listed (e.g. `#12`):
 
@@ -33,15 +33,16 @@ For each candidate, parse the `## Blocked by` section. For every issue number li
 gh issue view 12 --json state --jq '.state'
 ```
 
+> **If `gh` is not available**: use `github-pull-request_issue_fetch` with `issueNumber: 12`; check the `.state` field of the returned object.
+
 Keep only candidates where every blocker returns `CLOSED` (or the section reads "None — can start immediately").
 
-### 4. Select and confirm *(HITL checkpoint)*
+### 3. Select and confirm *(HITL checkpoint)*
 
 Present the top eligible issue to the user:
 
 ```
 Selected issue #N: {title}
-Type: AFK
 Blocked by: {summary}
 
 Proceed? (yes / no / pick a different issue)
@@ -218,6 +219,8 @@ Closes #{number}
 PREOF
 )"
 ```
+
+> **If `gh` is not available**: use the `github-pull-request_create_pull_request` tool with equivalent title, body, and head branch fields. See `docs/agents/issue-tracker.md` for the full fallback table.
 
 ### 4. Report
 

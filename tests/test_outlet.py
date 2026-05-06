@@ -191,6 +191,7 @@ class TestOutletsContainer:
 
 
 
+@requires_units
 class TestBasicOutletWithQuantities:
     """Test BasicOutlet with Quantity types for locations and fill states."""
 

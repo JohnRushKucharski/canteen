@@ -17,3 +17,7 @@ wheels/
 
 # Pytest
 .pytest_cache/
+
+# Coverage
+.coverage
+htmlcov/
