@@ -27,13 +27,15 @@ class Reservoir(Protocol):
     storage: int|float
     capacity: int|float
 
-    mappings: None|Mappings = None
-    pools: None|Pools = None
-    outlets: None|Outlets = None
+    operations: None|Operations
+    mappings: None|Mappings
+    pools: None|Pools
+    outlets: None|Outlets
 
-    def operate(self, *args: Any, **kwargs: Any) -> Any:
+    def operate(
+            self, inflow: int|float, *args: Any, **kwargs: Any
+    ) -> int|float|tuple[int|float, ...]:
         '''Calls operations to perform reservoir operations.'''
-        #Return failure if no operations are defined.
 
 @dataclass
 class BaseReservoir:
@@ -41,6 +43,11 @@ class BaseReservoir:
     Basic reservoir implementing the Reservoir interface.
     
     Supports builder pattern for adding components.
+
+    Physical infrastructure fields (outlets, pools, capacity, mappings) are frozen
+    after construction (ADR-0002). Only storage remains mutable. Optional container
+    fields (outlets, pools, mappings) default to empty Null Objects — never None
+    (ADR-0003).
     """
     name: str
     storage: int|float
@@ -54,16 +61,33 @@ class BaseReservoir:
     def __post_init__(self) -> None:
         validate_is_not_negative(self.storage, "storage")
         validate_is_at_least(self.capacity, self.storage, "capacity", "storage")
-        if self.pools and not self.is_pools_less_than_capacity(self.pools):
-            raise ValueError(
-                    f"""Invalid pool location. Reservoir capacity: {self.capacity} must be
-                    greater than top of storage for upper pool.
-                    {self.pools[0].info.name} has top of storage:{self.pools[0].info.range_[1]}.""")
+        if self.outlets is None:
+            object.__setattr__(self, 'outlets', Outlets())
+        if self.pools is None:
+            object.__setattr__(self, 'pools', Pools())
+        if self.mappings is None:
+            object.__setattr__(self, 'mappings', Mappings())
         if self.outlets and not self.is_outlets_less_than_capacity(self.outlets):
             raise ValueError(
                     f"""Invalid outlet location. Reservoir capacity: {self.capacity} must be
                     greater than outlet location.
                     Got outlets:{[f'{o.name}: {o.location}' for o in self.outlets]}.""")
+        if self.pools and not self.is_pools_less_than_capacity(self.pools):
+            raise ValueError(
+                    f"""Invalid pool location. Reservoir capacity: {self.capacity} must be
+                    greater than top of storage for upper pool.
+                    {self.pools[0].info.name} has top of storage:{self.pools[0].info.range_[1]}.""")
+        # Freeze structural fields — storage remains mutable (ADR-0002).
+        object.__setattr__(self, '_initialised', True)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Freeze structural fields after construction; storage stays mutable."""
+        if hasattr(self, '_initialised') and name != 'storage':
+            raise AttributeError(
+                f"Cannot set '{name}' after construction. "
+                "Use add_outlets(), add_pools(), add_maps(), or add_operations()."
+            )
+        object.__setattr__(self, name, value)
 
     def is_pools_less_than_capacity(self, pools: Pools) -> bool:
         """Check if pool top of storage is less than reservoir capacity."""
@@ -77,7 +101,7 @@ class BaseReservoir:
         """Add mappings to the reservoir, modifying its state."""
         if self.mappings:
             raise ValueError("Mappings already defined for reservoir.")
-        self.mappings = mappings
+        object.__setattr__(self, 'mappings', mappings)
         return self
 
     def add_pools(self, pools: Pools) -> Self:
@@ -89,7 +113,7 @@ class BaseReservoir:
                 f"""Invalid pool location. Reservoir capacity: {self.capacity} must be
                 greater than top of storage for upper pool.
                 {pools[0].info.name} has top of storage:{pools[0].info.range_[1]}.""")
-        self.pools = pools
+        object.__setattr__(self, 'pools', pools)
         return self
 
     def add_outlets(self, outlets: Outlets) -> Self:
@@ -101,21 +125,26 @@ class BaseReservoir:
                 f"""Invalid outlet location. Reservoir capacity: {self.capacity} must be
                 greater than outlet location.
                 Got outlets:{[f'{o.name}: {o.location}' for o in outlets]}.""")
-        self.outlets = outlets
+        object.__setattr__(self, 'outlets', outlets)
         return self
 
     def add_operations(self, operations: Operations) -> Self:
         """Add operations to the reservoir, modifying its state."""
         if self.operations:
             raise ValueError("Operations already defined for reservoir.")
-        self.operations = operations
+        object.__setattr__(self, 'operations', operations)
         return self
 
-    def operate(self, *args: Any, **kwargs: Any) -> Any:
-        """Perform reservoir operations."""
+    def operate(
+            self, inflow: int|float, *args: Any, **kwargs: Any
+    ) -> int|float|tuple[int|float, ...]:
+        """Perform reservoir operations and advance storage."""
         if not self.operations:
             raise ValueError('No operations defined for reservoir.')
-        return self.operations.operate(self,*args, **kwargs)
+        result = self.operations.operate(self, inflow, *args, **kwargs)
+        outflow: int|float = sum(result) if isinstance(result, tuple) else result
+        self.storage = self.storage + inflow - outflow
+        return result
 
     def __repr__(self) -> str:
         """String representation of the reservoir."""
@@ -132,7 +161,7 @@ class BaseReservoir:
         return base_repr + ")"
 
 def factory(name: str = "reservoir", storage: int|float = 0, capacity: int|float = 1,
-            operations: None|Operations = PassiveOperations(),
+            operations: None|Operations = None,
             outlets: None|Outlets = None, pools: None|Pools = None, mappings: None|Mappings = None
             )-> Reservoir:
     """Factory function to create a reservoir with specified parameters."""
@@ -140,7 +169,7 @@ def factory(name: str = "reservoir", storage: int|float = 0, capacity: int|float
         name=name,
         storage=storage,
         capacity=capacity,
-        operations=operations,
+        operations=operations if operations is not None else PassiveOperations(),
         outlets=outlets,
         pools=pools,
         mappings=mappings
