@@ -1,6 +1,7 @@
 ---
 name: ralph-loop
 description: Autonomously fix open GitHub issues one at a time using fresh-context subagents. Loops until no eligible issues remain, a fix-issue invocation is halted by the complexity gate or an error, or a HITL checkpoint is encountered. AFK-safe: no human input required during the loop. Use when asked to "run the ralph loop", work through all open issues, or fix issues autonomously.
+user-invocable: false
 ---
 
 # Ralph Loop
@@ -72,7 +73,7 @@ Pick the lowest-numbered eligible candidate.
 
 ### Step 1 — Spawn a fresh-context subagent
 
-Invoke a subagent using the `runSubagent` tool. Pass it the following prompt, substituting `{number}` and `{title}`:
+Invoke a subagent using the `runSubagent` tool with `model: "Claude Sonnet 4.5 (copilot)"`. Pass it the following prompt, substituting `{number}` and `{title}`:
 
 > Read the fix-issue skill at `.github/skills/fix-issue/SKILL.md` in full, then execute it for issue #{number} ("{title}").
 >
