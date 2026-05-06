@@ -78,7 +78,7 @@ A concise description of this vertical slice. Describe the end-to-end behavior, 
 
 - A reference to the blocking ticket (if any)
 
-Or "None - can start immediately" if no blockers.
+Or "None — can start immediately" if no blockers.
 
 </issue-template>
 
