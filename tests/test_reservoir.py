@@ -190,13 +190,13 @@ class TestReservoirOperations:
         """Test that operate executes when operations are defined."""
         reservoir = BaseReservoir(
             name="Test", storage=50, capacity=100,
-            operations=PassiveOperations(verbose=False)
+            operations=PassiveOperations()
         )
 
         result = reservoir.operate(inflow=10)
-        # With passive operations and no outlets, should return spill amount
+        # With passive operations and no outlets, should return (spill,) tuple
         # storage (50) + inflow (10) = 60, which is below capacity (100), so spill = 0
-        assert result == 0.0
+        assert result == (0.0,)
 
 
 class TestReservoirMapsAndBuilder:
@@ -389,15 +389,15 @@ class TestReservoirStorageMutation:
         reservoir.operate(inflow=20)
         assert reservoir.storage == 100
 
-    def test_operate_returns_spill_scalar_no_outlets(self):
-        """operate() returns the scalar spill value when no outlets are configured."""
+    def test_operate_returns_spill_tuple_no_outlets(self):
+        """operate() returns a (spill,) tuple when no outlets are configured."""
         reservoir = BaseReservoir(
             name="Test", storage=90, capacity=100,
             operations=PassiveOperations()
         )
         result = reservoir.operate(inflow=20)
-        # PassiveOperations with no outlets returns scalar spill
-        assert result == 10.0
+        # PassiveOperations always returns a tuple; (spill,) when no outlets
+        assert result == (10.0,)
 
     def test_successive_operates_advance_storage(self):
         """Multiple successive operate() calls correctly advance storage."""

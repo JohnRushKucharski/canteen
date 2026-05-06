@@ -11,60 +11,60 @@ class TestPassiveOperationsBasic:
         """Test passive operations when storage + inflow is below capacity."""
         reservoir = BaseReservoir(
             name="Test", storage=50, capacity=100,
-            operations=PassiveOperations(verbose=False)
+            operations=PassiveOperations()
         )
 
         result = reservoir.operate(inflow=20)
 
         # storage (50) + inflow (20) = 70, below capacity (100), so spill = 0
-        assert result == 0.0
+        assert result == (0.0,)
 
     def test_passive_operations_exact_capacity(self):
         """Test passive operations when storage + inflow equals capacity."""
         reservoir = BaseReservoir(
             name="Test", storage=80, capacity=100,
-            operations=PassiveOperations(verbose=False)
+            operations=PassiveOperations()
         )
 
         result = reservoir.operate(inflow=20)
 
         # storage (80) + inflow (20) = 100, exactly at capacity, no spill
-        assert result == 0.0
+        assert result == (0.0,)
 
     def test_passive_operations_overflow(self):
         """Test passive operations when storage + inflow exceeds capacity."""
         reservoir = BaseReservoir(
             name="Test", storage=90, capacity=100,
-            operations=PassiveOperations(verbose=False)
+            operations=PassiveOperations()
         )
 
         result = reservoir.operate(inflow=30)
 
         # storage (90) + inflow (30) = 120, exceeds capacity by 20
-        assert result == 20.0
+        assert result == (20.0,)
 
     def test_passive_operations_zero_inflow(self):
         """Test passive operations with zero inflow."""
         reservoir = BaseReservoir(
             name="Test", storage=50, capacity=100,
-            operations=PassiveOperations(verbose=False)
+            operations=PassiveOperations()
         )
 
         result = reservoir.operate(inflow=0)
 
-        assert result == 0.0
+        assert result == (0.0,)
 
     def test_passive_operations_negative_inflow(self):
         """Test passive operations with negative inflow (evaporation/seepage)."""
         reservoir = BaseReservoir(
             name="Test", storage=50, capacity=100,
-            operations=PassiveOperations(verbose=False)
+            operations=PassiveOperations()
         )
 
         result = reservoir.operate(inflow=-10)
 
         # storage (50) + inflow (-10) = 40, below capacity, no spill
-        assert result == 0.0
+        assert result == (0.0,)
 
 class TestPassiveOperationsWithOutlets:
     """Test PassiveOperations with outlet integration."""
@@ -76,7 +76,7 @@ class TestPassiveOperationsWithOutlets:
         reservoir = BaseReservoir(
             name="Test", storage=60, capacity=100,
             outlets=Outlets([outlet]),
-            operations=PassiveOperations(verbose=True)
+            operations=PassiveOperations()
         )
 
         result = reservoir.operate(inflow=10)
@@ -94,7 +94,7 @@ class TestPassiveOperationsWithOutlets:
         reservoir = BaseReservoir(
             name="Test", storage=80, capacity=100,
             outlets=Outlets([outlet]),
-            operations=PassiveOperations(verbose=True)
+            operations=PassiveOperations()
         )
 
         result = reservoir.operate(inflow=35)
@@ -113,7 +113,7 @@ class TestPassiveOperationsWithOutlets:
         reservoir = BaseReservoir(
             name="Test", storage=70, capacity=100,
             outlets=Outlets([outlet1, outlet2]),
-            operations=PassiveOperations(verbose=True)
+            operations=PassiveOperations()
         )
 
         result = reservoir.operate(inflow=20)
@@ -132,7 +132,7 @@ class TestPassiveOperationsWithOutlets:
         reservoir = BaseReservoir(
             name="Test", storage=30, capacity=100,
             outlets=Outlets([outlet]),
-            operations=PassiveOperations(verbose=True)
+            operations=PassiveOperations()
         )
 
         result = reservoir.operate(inflow=10)
@@ -143,60 +143,38 @@ class TestPassiveOperationsWithOutlets:
         assert result == (0, 0.0)  # No outlet release, no spill
 
 
-class TestPassiveOperationsVerboseMode:
-    """Test verbose mode behavior of PassiveOperations."""
+class TestPassiveOperationsAlwaysTuple:
+    """Test that PassiveOperations always returns a tuple regardless of outlet configuration."""
 
-    def test_verbose_false_returns_single_value(self):
-        """Test that verbose=False returns single spill value even with outlets."""
-        outlet = outlet_factory(name="spillway", location=50.0,
-                               design_range=ReleaseRange(0, 20))
+    def test_no_outlets_returns_single_element_tuple(self):
+        """Test that operate() with no outlets returns a one-element spill tuple."""
         reservoir = BaseReservoir(
             name="Test", storage=90, capacity=100,
-            outlets=Outlets([outlet]),
-            operations=PassiveOperations(verbose=False)
+            operations=PassiveOperations()
         )
 
         result = reservoir.operate(inflow=30)
 
-        # With verbose=False, should return single value (spill only)
-        assert isinstance(result, (int, float))
-        assert not isinstance(result, tuple)
-        assert result == 20.0  # storage (90) + inflow (30) = 120, exceeds capacity by 20
+        # storage (90) + inflow (30) = 120, exceeds capacity by 20
+        assert isinstance(result, tuple)
+        assert len(result) == 1
+        assert result == (20.0,)
 
-    def test_verbose_false_returns_single_value_summed_from_multiple_releases(self):
-        """Test that verbose=False returns single spill value even with outlets."""
+    def test_with_outlets_always_returns_tuple(self):
+        """Test that operate() with outlets always returns a tuple."""
         outlet = outlet_factory(name="spillway", location=50.0,
                                design_range=ReleaseRange(0, 20))
         reservoir = BaseReservoir(
             name="Test", storage=90, capacity=100,
             outlets=Outlets([outlet]),
-            operations=PassiveOperations(verbose=False)
-        )
-
-        result = reservoir.operate(inflow=40)
-
-        # With verbose=False, should return single value (spill only)
-        assert isinstance(result, (int, float))
-        assert not isinstance(result, tuple)
-        # 20 from outlet + 10 from spill = 30 total release
-        assert result == 30.0  # storage (90) + inflow (40) = 130, exceeds capacity by 30
-
-    def test_verbose_true_returns_tuple_with_outlets(self):
-        """Test that verbose=True returns tuple with outlet releases and spill."""
-        outlet = outlet_factory(name="spillway", location=50.0,
-                               design_range=ReleaseRange(0, 20))
-        reservoir = BaseReservoir(
-            name="Test", storage=90, capacity=100,
-            outlets=Outlets([outlet]),
-            operations=PassiveOperations(verbose=True)
+            operations=PassiveOperations()
         )
 
         result = reservoir.operate(inflow=30)
 
-        # With verbose=True, should return tuple
         assert isinstance(result, tuple)
         assert len(result) == 2  # (outlet_release, spill)
-        assert result == (20, 0.0)  # outlet releases 20, spill is 0
+        assert result == (20, 0.0)
 
 class TestPassiveOperationsOutputLabels:
     """Test output_labels method of PassiveOperations."""
@@ -205,21 +183,21 @@ class TestPassiveOperationsOutputLabels:
         """Test output labels for reservoir without outlets."""
         reservoir = BaseReservoir(
             name="Test", storage=50, capacity=100,
-            operations=PassiveOperations(verbose=True)
+            operations=PassiveOperations()
         )
 
         labels = reservoir.operations.output_labels(reservoir)
 
         assert labels == ("Spill",)
 
-    def test_output_labels_with_outlets_verbose_true(self):
-        """Test output labels for reservoir with outlets when verbose=True."""
+    def test_output_labels_with_outlets(self):
+        """Test output labels for reservoir with outlets."""
         outlet1 = outlet_factory(name="low_level", location=30.0)
         outlet2 = outlet_factory(name="spillway", location=80.0)
         reservoir = BaseReservoir(
             name="Test", storage=50, capacity=100,
             outlets=Outlets([outlet1, outlet2]),
-            operations=PassiveOperations(verbose=True)
+            operations=PassiveOperations()
         )
 
         labels = reservoir.operations.output_labels(reservoir)
@@ -230,19 +208,6 @@ class TestPassiveOperationsOutputLabels:
         assert "low_level" in labels
         assert "spillway" in labels
 
-    def test_output_labels_with_outlets_verbose_false(self):
-        """Test output labels for reservoir with outlets when verbose=False."""
-        outlet = outlet_factory(name="spillway", location=80.0)
-        reservoir = BaseReservoir(
-            name="Test", storage=50, capacity=100,
-            outlets=Outlets([outlet]),
-            operations=PassiveOperations(verbose=False)
-        )
-
-        labels = reservoir.operations.output_labels(reservoir)
-
-        # When verbose=False, should only return Spill label
-        assert labels == ("Spill",)
 
 
 class TestOperationsFactory:

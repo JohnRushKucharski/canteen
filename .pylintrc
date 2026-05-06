@@ -12,5 +12,12 @@ disable =
     too-many-arguments,
     too-many-positional-arguments,
 
+    # Operations.operate() and its concrete implementations declare *args/**kwargs
+    # as part of the Protocol signature for future extensibility.  Concrete
+    # implementations (e.g. PassiveOperations) are required to accept them even
+    # though they are not used, so that callers can pass extra kwargs without
+    # conditional dispatch.  This is not a code smell.
+    unused-argument,
+
 [FORMAT]
 max-line-length = 100

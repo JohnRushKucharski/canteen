@@ -34,7 +34,7 @@ class Reservoir(Protocol):
 
     def operate(
             self, inflow: int|float, *args: Any, **kwargs: Any
-    ) -> int|float|tuple[int|float, ...]:
+    ) -> tuple[int|float, ...]:
         '''Calls operations to perform reservoir operations.'''
 
 @dataclass
@@ -137,13 +137,12 @@ class BaseReservoir:
 
     def operate(
             self, inflow: int|float, *args: Any, **kwargs: Any
-    ) -> int|float|tuple[int|float, ...]:
+    ) -> tuple[int|float, ...]:
         """Perform reservoir operations and advance storage."""
         if not self.operations:
             raise ValueError('No operations defined for reservoir.')
         result = self.operations.operate(self, inflow, *args, **kwargs)
-        outflow: int|float = sum(result) if isinstance(result, tuple) else result
-        self.storage = self.storage + inflow - outflow
+        self.storage = self.storage + inflow - sum(result)
         return result
 
     def __repr__(self) -> str:
