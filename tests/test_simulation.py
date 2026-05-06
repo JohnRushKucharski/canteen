@@ -220,3 +220,19 @@ class TestSimulateOutletTracking:
         # Should have standard columns only (no outlet columns)
         assert result.dtype.names == ('timestep', 'inflow', 'storage', 'spill')
         assert 'spill' in result.dtype.names
+
+    def test_simulate_raises_on_outlet_name_collision_with_reserved_column(self):
+        """Test that a ValueError is raised when an outlet name collides with reserved columns."""
+        import pytest
+        from canteen import outlet
+
+        for reserved in ('timestep', 'inflow', 'storage', 'spill'):
+            bad_outlet = outlet.factory(name=reserved, location=10.0)
+            res = reservoir.factory(
+                name="Test",
+                storage=50.0,
+                capacity=100.0,
+                outlets=[bad_outlet]
+            )
+            with pytest.raises(ValueError, match="conflict with reserved simulation columns"):
+                simulate(res, [10.0])

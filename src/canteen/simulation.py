@@ -13,6 +13,8 @@ from numpy.typing import NDArray
 
 from canteen.reservoir import Reservoir
 
+_RESERVED_COLUMNS: frozenset[str] = frozenset({'timestep', 'inflow', 'storage', 'spill'})
+
 
 def simulate(
     reservoir: Reservoir,
@@ -44,6 +46,14 @@ def simulate(
     """
     # Extract outlet names from reservoir for dynamic columns
     outlet_names = [outlet.name for outlet in reservoir.outlets]
+
+    # Guard: outlet names must not collide with reserved column names
+    conflicts = _RESERVED_COLUMNS.intersection(outlet_names)
+    if conflicts:
+        raise ValueError(
+            f"Outlet name(s) conflict with reserved simulation columns: "
+            f"{sorted(conflicts)}. Reserved names are: {sorted(_RESERVED_COLUMNS)}."
+        )
 
     # Build dtype dynamically: timestep, inflow, storage, [outlets...], spill
     dtype_fields = [
