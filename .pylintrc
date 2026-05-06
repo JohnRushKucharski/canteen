@@ -19,5 +19,10 @@ disable =
     # conditional dispatch.  This is not a code smell.
     unused-argument,
 
+    # ReservoirBuilder is an internal implementation detail not exported in __all__.
+    # Test files import it inside test functions to make clear they're testing internal
+    # APIs. This is intentional and not a code smell.
+    import-outside-toplevel,
+
 [FORMAT]
 max-line-length = 100

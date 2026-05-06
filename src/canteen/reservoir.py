@@ -85,7 +85,8 @@ class BaseReservoir:
         if hasattr(self, '_initialised') and name != 'storage':
             raise AttributeError(
                 f"Cannot set '{name}' after construction. "
-                "Use add_outlets(), add_pools(), add_maps(), or add_operations()."
+                "Physical infrastructure is frozen after construction (ADR-0002). "
+                "Use ReservoirBuilder or factory() to construct reservoirs with components."
             )
         object.__setattr__(self, name, value)
 
@@ -163,13 +164,150 @@ def factory(name: str = "reservoir", storage: int|float = 0, capacity: int|float
             operations: None|Operations = None,
             outlets: None|Outlets = None, pools: None|Pools = None, mappings: None|Mappings = None
             )-> Reservoir:
-    """Factory function to create a reservoir with specified parameters."""
-    return BaseReservoir(
-        name=name,
-        storage=storage,
-        capacity=capacity,
-        operations=operations if operations is not None else PassiveOperations(),
-        outlets=outlets if outlets is not None else Outlets(),
-        pools=pools if pools is not None else Pools(),
-        mappings=mappings if mappings is not None else Mappings()
-    )
+    """
+    Factory function to create a reservoir with specified parameters.
+    
+    Uses ReservoirBuilder internally to ensure consistent validation
+    and construction. Provides a convenient interface for simple cases
+    while maintaining the builder pattern's guarantees.
+    """
+    builder = ReservoirBuilder(name=name, storage=storage, capacity=capacity)
+
+    # Add operations (required, defaults to PassiveOperations)
+    builder.add_operations(operations if operations is not None else PassiveOperations())
+
+    # Add optional components if provided
+    if outlets is not None:
+        builder.add_outlets(outlets)
+    if pools is not None:
+        builder.add_pools(pools)
+    if mappings is not None:
+        builder.add_mappings(mappings)
+
+    return builder.build()
+
+
+class ReservoirBuilder:
+    """
+    Builder for constructing immutable BaseReservoir instances.
+    
+    Accumulates components via fluent API and validates completeness
+    before construction. Ensures invalid reservoir states (missing operations,
+    None checks) are unrepresentable.
+    """
+
+    def __init__(self, name: str, storage: int|float, capacity: int|float) -> None:
+        """
+        Initialize builder with required reservoir parameters.
+        
+        Parameters
+        ----------
+        name : str
+            Reservoir name.
+        storage : int|float
+            Initial storage volume.
+        capacity : int|float
+            Maximum storage capacity.
+        """
+        self._name = name
+        self._storage = storage
+        self._capacity = capacity
+        self._operations: None|Operations = None
+        self._outlets: None|Outlets = None
+        self._pools: None|Pools = None
+        self._mappings: None|Mappings = None
+
+    def add_operations(self, operations: Operations) -> Self:
+        """
+        Add operations strategy to the builder.
+        
+        Parameters
+        ----------
+        operations : Operations
+            The operations strategy to attach.
+        
+        Returns
+        -------
+        Self
+            This builder instance for method chaining.
+        """
+        self._operations = operations
+        return self
+
+    def add_outlets(self, outlets: Outlets) -> Self:
+        """
+        Add outlets to the builder.
+        
+        Parameters
+        ----------
+        outlets : Outlets
+            The outlets collection to attach.
+        
+        Returns
+        -------
+        Self
+            This builder instance for method chaining.
+        """
+        self._outlets = outlets
+        return self
+
+    def add_pools(self, pools: Pools) -> Self:
+        """
+        Add pools to the builder.
+        
+        Parameters
+        ----------
+        pools : Pools
+            The pools collection to attach.
+        
+        Returns
+        -------
+        Self
+            This builder instance for method chaining.
+        """
+        self._pools = pools
+        return self
+
+    def add_mappings(self, mappings: Mappings) -> Self:
+        """
+        Add mappings to the builder.
+        
+        Parameters
+        ----------
+        mappings : Mappings
+            The mappings collection to attach.
+        
+        Returns
+        -------
+        Self
+            This builder instance for method chaining.
+        """
+        self._mappings = mappings
+        return self
+
+    def build(self) -> BaseReservoir:
+        """
+        Construct and return an immutable BaseReservoir.
+        
+        Returns
+        -------
+        BaseReservoir
+            A fully validated reservoir instance.
+        
+        Raises
+        ------
+        ValueError
+            If operations is not set.
+        """
+        if self._operations is None:
+            raise ValueError("Operations must be set before building reservoir.")
+
+        return BaseReservoir(
+            name=self._name,
+            storage=self._storage,
+            capacity=self._capacity,
+            operations=self._operations,
+            outlets=self._outlets if self._outlets is not None else Outlets(),
+            pools=self._pools if self._pools is not None else Pools(),
+            mappings=self._mappings if self._mappings is not None else Mappings()
+        )
