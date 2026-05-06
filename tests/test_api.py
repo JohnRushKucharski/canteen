@@ -2,9 +2,10 @@
 
 import pytest
 
+import canteen
 from canteen import (
     operations, reservoir, outlet, pool,
-    BaseReservoir, Outlets, Pools, factory
+    BaseReservoir, Outlets, Pools,
 )
 from canteen.operations import PassiveOperations
 
@@ -130,10 +131,9 @@ class TestModuleFactories:
         ops = operations.factory()
         assert isinstance(ops, PassiveOperations)
 
-    def test_top_level_factory(self):
-        """Test top-level factory() creates operations."""
-        ops = factory()
-        assert isinstance(ops, PassiveOperations)
+    def test_canteen_factory_not_exported(self):
+        """Test canteen.factory is not a top-level export (issue #8)."""
+        assert not hasattr(canteen, 'factory')
 
 class TestDocstringExamples:
     """Test all examples from module docstrings."""
