@@ -177,13 +177,13 @@ class TestReservoirOperations:
         """Test that operate executes when operations are defined."""
         reservoir = BaseReservoir(
             name="Test", storage=50, capacity=100,
-            operations=PassiveOperations(verbose=False)
+            operations=PassiveOperations()
         )
 
         result = reservoir.operate(inflow=10)
-        # With passive operations and no outlets, should return spill amount
+        # With passive operations and no outlets, should return (spill,) tuple
         # storage (50) + inflow (10) = 60, which is below capacity (100), so spill = 0
-        assert result == 0.0
+        assert result == (0.0,)
 
 
 class TestReservoirMapsAndBuilder:

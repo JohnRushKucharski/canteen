@@ -10,9 +10,6 @@ from __future__ import annotations
 from typing import Any, Protocol, TYPE_CHECKING
 from dataclasses import dataclass
 
-from canteen.mapping import Mappings
-#from canteen.reservoir import Reservoir
-
 if TYPE_CHECKING:
     from canteen.reservoir import Reservoir
 
@@ -23,30 +20,33 @@ class Operations(Protocol):
     """
     Protocol for reservoir operation strategies.
     """
-    verbose: bool
-    mappings: None|Mappings
 
-    def operate(self, *args: Any, **kwargs: Any) -> int|float|tuple[int|float,...]:
+    def operate(self, reservoir: Reservoir, inflow: int|float,
+                *args: Any, **kwargs: Any) -> tuple[int|float, ...]:
         """
         Execute reservoir operations.
-        
+
         Parameters
         ----------
+        reservoir : Reservoir
+            The reservoir to operate.
+        inflow : int|float
+            Volume of water entering the reservoir this timestep.
         *args : Any
-            Additional positional arguments
+            Additional positional arguments.
         **kwargs : Any
-            Additional keyword arguments
-            
+            Additional keyword arguments.
+
         Returns
         -------
-        int|float|tuple[int|float,...]
-            Single release volume if no outlets are defined, or
-            Tuple of release volumes, one for each reservoir outlet and a spilled release. 
+        tuple[int|float, ...]
+            One release volume per outlet (highest-to-lowest location) plus spill
+            as the final element. Returns (spill,) when no outlets are defined.
         """
     def output_labels(self, reservoir: Reservoir) -> tuple[str, ...]:
         """
         Get labels for operation outputs.
-        
+
         Parameters
         ----------
         reservoir : Reservoir
@@ -57,41 +57,45 @@ class Operations(Protocol):
 class PassiveOperations:
     """
     Passive operations strategy for reservoirs.
-    Makes maximum releases through outlets, if they are defined and spills excess above capacity.
-    """
-    verbose: bool = True
-    mappings: None|Mappings = None
 
-    def operate(self, reservoir: Reservoir, inflow: int|float, #pylint: disable=unused-argument
-                *args: Any, **kwargs: Any) -> int|float|tuple[int|float, ...]:
+    Makes maximum releases through outlets from highest to lowest location,
+    then spills any remaining volume above capacity. Always returns a tuple:
+    one value per outlet plus spill as the final element.
+    """
+
+    def operate(self, reservoir: Reservoir, inflow: int|float,
+                *args: Any, **kwargs: Any) -> tuple[int|float, ...]:
         """
-        Apply passive operations to reservoir for single time step.
+        Apply passive operations to reservoir for a single timestep.
+
+        Parameters
+        ----------
+        reservoir : Reservoir
+            The reservoir to operate. Storage is NOT mutated here.
+        inflow : int|float
+            Volume of water entering the reservoir this timestep.
+
+        Returns
+        -------
+        tuple[int|float, ...]
+            One release per outlet (highest-to-lowest location) plus spill.
+            Returns (spill,) when no outlets are defined.
         """
-        def operate_outlets(active_storage: int|float) -> tuple[int|float, ...]:
-            """
-            Helper function for reservoirs with outlets.
-            """
-            # Only called if has_outlets is True
-            assert reservoir.outlets is not None
+        active_storage = reservoir.storage + inflow
+        if reservoir.outlets:
             outflows: list[int|float] = []
-            # first operate outlets.
             for outlet in reservoir.outlets:
                 outflows.append(inc_outflow := outlet.operations(active_storage).max)
-                active_storage-=inc_outflow
-            # then spill any remaining volume above capacity.
+                active_storage -= inc_outflow
             outflows.append(max(0.0, active_storage - reservoir.capacity))
             return tuple(outflows)
-
-        active_storage = reservoir.storage + inflow
-        spilled_outflow: int|float = max(0.0, active_storage - reservoir.capacity)
-        # if outlets operate outlets, then spill. if no outlets, only spill excess.
-        return operate_outlets(active_storage) if reservoir.outlets and self.verbose else spilled_outflow #pylint: disable=line-too-long
+        return (max(0.0, active_storage - reservoir.capacity),)
 
     def output_labels(self, reservoir: Reservoir) -> tuple[str, ...]:
         """
-        Get labels for operation outputs.
+        Get output labels matching the tuple returned by operate().
         """
-        if reservoir.outlets and self.verbose:
+        if reservoir.outlets:
             outlet_labels = [outlet.name for outlet in reservoir.outlets]
             return tuple(outlet_labels + ['Spill'])
         return ("Spill",)
