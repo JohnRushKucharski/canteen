@@ -236,3 +236,72 @@ class TestSimulateOutletTracking:
             )
             with pytest.raises(ValueError, match="conflict with reserved simulation columns"):
                 simulate(res, [10.0])
+
+
+class TestSimulateValidation:
+    """Test validation and error handling in simulation."""
+
+    def test_simulate_raises_when_reservoir_has_no_operations(self):
+        """Test that simulate raises ValueError when reservoir.operations is None."""
+        import pytest
+        from canteen.reservoir import BaseReservoir
+
+        # Create reservoir without operations
+        res = BaseReservoir(name="Test", storage=50.0, capacity=100.0)
+        inflows = [10.0, 20.0]
+
+        with pytest.raises(ValueError, match="operations"):
+            simulate(res, inflows)
+
+    def test_simulate_raises_when_storage_goes_negative(self):
+        """Test that simulate raises error when storage becomes negative."""
+        import pytest
+
+        # Create reservoir with starting storage that will go negative
+        res = reservoir.factory(name="Test", storage=10.0, capacity=100.0)
+        # Large negative inflow will cause storage to go negative
+        inflows = [5.0, -20.0]  # After t=1: storage = 15 + (-20) = -5
+
+        with pytest.raises(ValueError, match="storage|negative"):
+            simulate(res, inflows)
+
+    def test_simulate_raises_when_storage_exceeds_capacity(self):
+        """Test that simulate raises error when storage exceeds capacity after operation."""
+        import pytest
+        from canteen.operations import Operations
+        from canteen.reservoir import Reservoir, BaseReservoir
+
+        # Create custom operations that fails to spill properly (buggy strategy)
+        class BuggyOperations(Operations):
+            """Operations that doesn't release or spill anything."""
+
+            def operate(
+                self, reservoir: Reservoir, inflow: float
+            ) -> tuple[float, ...]:
+                """Return zero outflows (buggy - doesn't spill)."""
+                return (0.0,)  # No spill, will cause capacity overflow
+
+        # Create reservoir with buggy operations directly
+        res = BaseReservoir(
+            name="Test",
+            storage=95.0,
+            capacity=100.0,
+            operations=BuggyOperations()
+        )
+        inflows = [10.0]  # storage = 95 + 10 - 0 = 105 > capacity
+
+        with pytest.raises(ValueError, match="capacity|exceeds"):
+            simulate(res, inflows)
+
+    def test_simulate_accepts_optional_timestamps_parameter(self):
+        """Test that simulate accepts optional timestamps parameter."""
+        res = reservoir.factory(name="Test", storage=50.0, capacity=100.0)
+        inflows = [10.0, 20.0, 15.0]
+        timestamps = ['2024-01-01', '2024-01-02', '2024-01-03']
+
+        # Should not raise - timestamps parameter exists
+        result = simulate(res, inflows, timestamps=timestamps)
+
+        # Result should be returned successfully
+        assert result is not None
+        assert len(result) == 3

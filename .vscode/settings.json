@@ -9,5 +9,8 @@
     "python.testing.pytestEnabled": true,
     "python.testing.autoTestDiscoverOnSaveEnabled": false,
     "python.testing.cwd": "${workspaceFolder}",
-    "python-envs.pythonProjects": []
+    "python-envs.pythonProjects": [],
+    "python.pyrefly.disableTypeErrors": true,
+    "python.pyrefly.disableLanguageServices": true,
+    "python.pyrefly.typeCheckingMode": "off"
 }
