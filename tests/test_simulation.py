@@ -290,7 +290,7 @@ class TestSimulateValidation:
         )
         inflows = [10.0]  # storage = 95 + 10 - 0 = 105 > capacity
 
-        with pytest.raises((ValueError, AssertionError), match="capacity|exceeds"):
+        with pytest.raises(ValueError, match="capacity|exceeds"):
             simulate(res, inflows)
 
     def test_simulate_accepts_optional_timestamps_parameter(self):
