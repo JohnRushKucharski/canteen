@@ -152,6 +152,9 @@ def to_pandas(result: NDArray[np.void]) -> Any:
     if data_frame is not None and hasattr(data_frame, "from_records"):
         return data_frame.from_records(result)
 
+    if len(result) == 0:
+        return pd.DataFrame(_to_columns(result))
+
     return pd.DataFrame(_to_rows(result))
 
 

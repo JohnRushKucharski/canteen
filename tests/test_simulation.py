@@ -493,6 +493,65 @@ class TestSimulationDataFrameConverters:
         assert self._get_value(polars_df, 0, 'MainGate') == 2.0
         assert self._get_value(polars_df, 1, 'spill') == 1.0
 
+    def test_converters_preserve_schema_for_empty_results(self):
+        """Test empty structured arrays preserve dtype schema columns in converters."""
+        from canteen.simulation import to_pandas, to_polars
+        import sys
+        import types
+
+        result = np.array(
+            [],
+            dtype=[
+                ('timestep', np.int32),
+                ('timestamp', 'datetime64[D]'),
+                ('inflow', np.float64),
+                ('storage', np.float64),
+                ('MainGate', np.float64),
+                ('spill', np.float64),
+            ],
+        )
+
+        def _pandas_dataframe(columns):
+            """Return columns payload for assertion-friendly fake dataframe behavior."""
+            return {'columns': columns}
+
+        def _polars_dataframe(columns):
+            """Return columns payload for assertion-friendly fake dataframe behavior."""
+            return {'columns': columns}
+
+        old_pandas = sys.modules.get("pandas")
+        old_polars = sys.modules.get("polars")
+        fake_pd = types.ModuleType("pandas")
+        fake_pd.DataFrame = _pandas_dataframe
+        fake_pl = types.ModuleType("polars")
+        fake_pl.DataFrame = _polars_dataframe
+
+        sys.modules["pandas"] = fake_pd
+        sys.modules["polars"] = fake_pl
+        try:
+            pandas_df = to_pandas(result)
+            polars_df = to_polars(result)
+        finally:
+            if old_pandas is None:
+                del sys.modules["pandas"]
+            else:
+                sys.modules["pandas"] = old_pandas
+            if old_polars is None:
+                del sys.modules["polars"]
+            else:
+                sys.modules["polars"] = old_polars
+
+        expected_columns = [
+            'timestep',
+            'timestamp',
+            'inflow',
+            'storage',
+            'MainGate',
+            'spill',
+        ]
+        assert list(pandas_df['columns'].keys()) == expected_columns
+        assert list(polars_df['columns'].keys()) == expected_columns
+
     def test_to_pandas_raises_helpful_error_when_pandas_missing(self, monkeypatch):
         """Test that to_pandas raises ImportError with helpful guidance."""
         import pytest
