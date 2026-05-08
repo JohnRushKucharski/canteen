@@ -493,10 +493,11 @@ class TestSimulationDataFrameConverters:
         assert self._get_value(polars_df, 0, 'MainGate') == 2.0
         assert self._get_value(polars_df, 1, 'spill') == 1.0
 
-    def test_to_pandas_raises_helpful_error_when_pandas_missing(self):
+    def test_to_pandas_raises_helpful_error_when_pandas_missing(self, monkeypatch):
         """Test that to_pandas raises ImportError with helpful guidance."""
-        import builtins
         import pytest
+        import sys
+        from importlib import import_module as real_import_module
 
         from canteen.simulation import to_pandas
 
@@ -510,24 +511,22 @@ class TestSimulationDataFrameConverters:
             ],
         )
 
-        real_import = builtins.__import__
-
-        def _fake_import(name, *args, **kwargs):
+        def _fake_import(name, package=None):
             if name == "pandas":
                 raise ImportError("No module named pandas")
-            return real_import(name, *args, **kwargs)
+            return real_import_module(name, package)
 
-        builtins.__import__ = _fake_import
-        try:
-            with pytest.raises(ImportError, match="pandas"):
-                to_pandas(result)
-        finally:
-            builtins.__import__ = real_import
+        monkeypatch.setattr("canteen.simulation.importlib.import_module", _fake_import)
+        monkeypatch.delitem(sys.modules, "pandas", raising=False)
 
-    def test_to_polars_raises_helpful_error_when_polars_missing(self):
+        with pytest.raises(ImportError, match="pandas"):
+            to_pandas(result)
+
+    def test_to_polars_raises_helpful_error_when_polars_missing(self, monkeypatch):
         """Test that to_polars raises ImportError with helpful guidance."""
-        import builtins
         import pytest
+        import sys
+        from importlib import import_module as real_import_module
 
         from canteen.simulation import to_polars
 
@@ -541,16 +540,13 @@ class TestSimulationDataFrameConverters:
             ],
         )
 
-        real_import = builtins.__import__
-
-        def _fake_import(name, *args, **kwargs):
+        def _fake_import(name, package=None):
             if name == "polars":
                 raise ImportError("No module named polars")
-            return real_import(name, *args, **kwargs)
+            return real_import_module(name, package)
 
-        builtins.__import__ = _fake_import
-        try:
-            with pytest.raises(ImportError, match="polars"):
-                to_polars(result)
-        finally:
-            builtins.__import__ = real_import
+        monkeypatch.setattr("canteen.simulation.importlib.import_module", _fake_import)
+        monkeypatch.delitem(sys.modules, "polars", raising=False)
+
+        with pytest.raises(ImportError, match="polars"):
+            to_polars(result)
