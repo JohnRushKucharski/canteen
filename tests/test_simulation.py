@@ -262,7 +262,7 @@ class TestSimulateValidation:
         # Large negative inflow will cause storage to go negative
         inflows = [5.0, -20.0]  # After t=1: storage = 15 + (-20) = -5
 
-        with pytest.raises((ValueError, AssertionError), match="storage|negative"):
+        with pytest.raises(ValueError, match="storage|negative"):
             simulate(res, inflows)
 
     def test_simulate_raises_when_storage_exceeds_capacity(self):
