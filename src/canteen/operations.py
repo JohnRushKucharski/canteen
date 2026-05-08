@@ -43,6 +43,8 @@ class Operations(Protocol):
             One release volume per outlet (highest-to-lowest location) plus spill
             as the final element. Returns (spill,) when no outlets are defined.
         """
+        return (0.0,)
+
     def output_labels(self, reservoir: Reservoir) -> tuple[str, ...]:
         """
         Get labels for operation outputs.
@@ -52,6 +54,7 @@ class Operations(Protocol):
         reservoir : Reservoir
             The reservoir to get labels for.
         """
+        return ('Spill',)
 
 @dataclass
 class PassiveOperations:
@@ -99,6 +102,54 @@ class PassiveOperations:
     def __repr__(self) -> str:
         """String representation."""
         return "PassiveOperations()"
+
+
+@dataclass
+class HedgingOperationsDecorator:
+    """Operations decorator that reduces outlet releases in a hedging range."""
+
+    base_operations: Operations
+    hedging_min_storage: int | float
+    hedging_max_storage: int | float
+    reduction_factor: int | float
+
+    def operate(
+        self,
+        reservoir: Reservoir,
+        inflow: int | float,
+        *args: Any,
+        **kwargs: Any,
+    ) -> tuple[int | float, ...]:
+        """Delegate to base operations and optionally reduce non-spill releases."""
+        base_outflows = tuple(
+            self.base_operations.operate(reservoir, inflow, *args, **kwargs)
+        )
+        if not self.hedging_min_storage <= reservoir.storage <= self.hedging_max_storage:
+            return base_outflows
+
+        if len(base_outflows) == 0:
+            return base_outflows
+
+        non_spill = base_outflows[:-1]
+        reduced_non_spill = tuple(value * self.reduction_factor for value in non_spill)
+        active_storage = reservoir.storage + inflow - sum(reduced_non_spill)
+        spill = max(0.0, active_storage - reservoir.capacity)
+        return reduced_non_spill + (spill,)
+
+    def output_labels(self, reservoir: Reservoir) -> tuple[str, ...]:
+        """Delegate output labels to wrapped operations strategy."""
+        return self.base_operations.output_labels(reservoir)
+
+    def __repr__(self) -> str:
+        """String representation."""
+        return (
+            "HedgingOperationsDecorator("
+            f"base_operations={self.base_operations}, "
+            f"hedging_min_storage={self.hedging_min_storage}, "
+            f"hedging_max_storage={self.hedging_max_storage}, "
+            f"reduction_factor={self.reduction_factor}"
+            ")"
+        )
 
 NAMED_OPERATIONS = {
     "PASSIVE": PassiveOperations,

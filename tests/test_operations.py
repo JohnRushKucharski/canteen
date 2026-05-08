@@ -1,6 +1,11 @@
 """Tests for the operations module."""
 import pytest
-from canteen.operations import PassiveOperations, factory, NAMED_OPERATIONS
+from canteen.operations import (
+    HedgingOperationsDecorator,
+    NAMED_OPERATIONS,
+    PassiveOperations,
+    factory,
+)
 from canteen.reservoir import BaseReservoir
 from canteen.outlet import Outlets, factory as outlet_factory, ReleaseRange
 
@@ -251,6 +256,89 @@ class TestPassiveOperationsRepresentation:
         repr_str = repr(ops)
 
         assert "PassiveOperations" in repr_str
+
+
+class TestHedgingOperationsDecorator:
+    """Test hedging decorator operations behavior."""
+
+    def test_accepts_base_operations_and_hedging_parameters(self):
+        """Decorator should store base operations and hedging parameters."""
+        operations = HedgingOperationsDecorator(
+            base_operations=PassiveOperations(),
+            hedging_min_storage=40.0,
+            hedging_max_storage=80.0,
+            reduction_factor=0.5,
+        )
+
+        reservoir = BaseReservoir(
+            name="Test", storage=60, capacity=100,
+            operations=operations,
+        )
+
+        result = operations.operate(reservoir, inflow=10)
+
+        assert operations.hedging_min_storage == 40.0
+        assert operations.hedging_max_storage == 80.0
+        assert operations.reduction_factor == 0.5
+        assert isinstance(result, tuple)
+
+    def test_delegates_unchanged_outside_hedging_range(self):
+        """Decorator should return base outflows unchanged outside hedging range."""
+        outlet = outlet_factory(name="spillway", location=50.0,
+                               design_range=ReleaseRange(0, 20))
+        reservoir = BaseReservoir(
+            name="Test", storage=90, capacity=100,
+            outlets=Outlets([outlet]),
+            operations=HedgingOperationsDecorator(
+                base_operations=PassiveOperations(),
+                hedging_min_storage=40.0,
+                hedging_max_storage=80.0,
+                reduction_factor=0.5,
+            )
+        )
+
+        result = reservoir.operate(inflow=20)
+
+        assert result == (20, 0.0)
+
+    def test_reduces_outlet_releases_within_hedging_range(self):
+        """Decorator should reduce non-spill outflows when storage is in range."""
+        outlet = outlet_factory(name="spillway", location=50.0,
+                               design_range=ReleaseRange(0, 20))
+        reservoir = BaseReservoir(
+            name="Test", storage=60, capacity=100,
+            outlets=Outlets([outlet]),
+            operations=HedgingOperationsDecorator(
+                base_operations=PassiveOperations(),
+                hedging_min_storage=40.0,
+                hedging_max_storage=80.0,
+                reduction_factor=0.5,
+            )
+        )
+
+        result = reservoir.operate(inflow=10)
+
+        assert result == (10.0, 0.0)
+
+    def test_output_labels_delegate_to_base_operations(self):
+        """Decorator should preserve output labels from the wrapped strategy."""
+        outlet = outlet_factory(name="spillway", location=50.0,
+                               design_range=ReleaseRange(0, 20))
+        operations = HedgingOperationsDecorator(
+            base_operations=PassiveOperations(),
+            hedging_min_storage=40.0,
+            hedging_max_storage=80.0,
+            reduction_factor=0.5,
+        )
+        reservoir = BaseReservoir(
+            name="Test", storage=60, capacity=100,
+            outlets=Outlets([outlet]),
+            operations=operations,
+        )
+
+        labels = operations.output_labels(reservoir)
+
+        assert labels == ("spillway", "Spill")
 
 
 class TestNamedOperationsRegistry:
