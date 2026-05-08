@@ -312,3 +312,297 @@ class TestSimulateValidation:
         # Result should be returned successfully
         assert result is not None
         assert len(result) == 3
+
+
+class TestSimulationDataFrameConverters:
+    """Test structured-array to DataFrame converter helpers."""
+
+    @staticmethod
+    def _get_value(frame_payload, row_index, column_name):
+        """Read values from fake row- or column-oriented frame payloads."""
+        if 'rows' in frame_payload:
+            return frame_payload['rows'][row_index][column_name]
+        return frame_payload['data'][row_index][column_name]
+
+    def test_to_pandas_converts_structured_array_to_dataframe(self):
+        """Test that to_pandas converts simulation result to pandas DataFrame."""
+        from canteen.simulation import to_pandas
+        import sys
+        import types
+
+        result = np.array(
+            [(0, 10.0, 50.0, 0.0), (1, 20.0, 70.0, 0.0)],
+            dtype=[
+                ('timestep', np.int32),
+                ('inflow', np.float64),
+                ('storage', np.float64),
+                ('spill', np.float64),
+            ],
+        )
+
+        def _dataframe(rows):
+            """Return rows payload for assertion-friendly fake dataframe behavior."""
+            return {'rows': rows}
+
+        monkey_module = types.ModuleType("pandas")
+        monkey_module.DataFrame = _dataframe
+        old_pandas = sys.modules.get("pandas")
+        sys.modules["pandas"] = monkey_module
+        try:
+            converted = to_pandas(result)
+        finally:
+            if old_pandas is None:
+                del sys.modules["pandas"]
+            else:
+                sys.modules["pandas"] = old_pandas
+
+        assert isinstance(converted, dict)
+        assert len(converted['rows']) == 2
+        assert converted['rows'][0]['timestep'] == 0
+        assert converted['rows'][1]['storage'] == 70.0
+
+    def test_to_polars_converts_structured_array_to_dataframe(self):
+        """Test that to_polars converts simulation result to polars DataFrame."""
+        from canteen.simulation import to_polars
+        import sys
+        import types
+
+        result = np.array(
+            [(0, 10.0, 50.0, 0.0), (1, 20.0, 70.0, 5.0)],
+            dtype=[
+                ('timestep', np.int32),
+                ('inflow', np.float64),
+                ('storage', np.float64),
+                ('spill', np.float64),
+            ],
+        )
+
+        def _dataframe(columns):
+            """Return data payload for assertion-friendly fake dataframe behavior."""
+            return {'data': columns}
+
+        monkey_module = types.ModuleType("polars")
+        monkey_module.DataFrame = _dataframe
+        old_polars = sys.modules.get("polars")
+        sys.modules["polars"] = monkey_module
+        try:
+            converted = to_polars(result)
+        finally:
+            if old_polars is None:
+                del sys.modules["polars"]
+            else:
+                sys.modules["polars"] = old_polars
+
+        assert isinstance(converted, dict)
+        assert len(converted['data']) == 2
+        assert self._get_value(converted, 0, 'inflow') == 10.0
+        assert self._get_value(converted, 1, 'spill') == 5.0
+
+    def test_to_pandas_passes_structured_array_directly_to_dataframe(self):
+        """Test that to_pandas passes the structured array directly to DataFrame()."""
+        from canteen.simulation import to_pandas
+        import sys
+        import types
+
+        result = np.array(
+            [(0, 10.0, 50.0, 0.0)],
+            dtype=[
+                ('timestep', np.int32),
+                ('inflow', np.float64),
+                ('storage', np.float64),
+                ('spill', np.float64),
+            ],
+        )
+
+        def _dataframe(data):
+            """Capture the argument passed to DataFrame() for assertion."""
+            return {'data': data}
+
+        monkey_module = types.ModuleType("pandas")
+        monkey_module.DataFrame = _dataframe
+        old_pandas = sys.modules.get("pandas")
+        sys.modules["pandas"] = monkey_module
+        try:
+            converted = to_pandas(result)
+        finally:
+            if old_pandas is None:
+                del sys.modules["pandas"]
+            else:
+                sys.modules["pandas"] = old_pandas
+
+        # Fake receives the raw structured array — not a row-dict list
+        assert isinstance(converted['data'], np.ndarray)
+        assert converted['data'].dtype.names == ('timestep', 'inflow', 'storage', 'spill')
+
+    def test_converters_handle_results_with_outlet_columns_and_timestamps(self):
+        """Test converter compatibility with richer simulation schemas."""
+        from canteen.simulation import to_pandas, to_polars
+        import sys
+        import types
+
+        result = np.array(
+            [
+                (0, np.datetime64('2026-01-01'), 10.0, 50.0, 2.0, 0.0),
+                (1, np.datetime64('2026-01-02'), 20.0, 68.0, 3.0, 1.0),
+            ],
+            dtype=[
+                ('timestep', np.int32),
+                ('timestamp', 'datetime64[D]'),
+                ('inflow', np.float64),
+                ('storage', np.float64),
+                ('MainGate', np.float64),
+                ('spill', np.float64),
+            ],
+        )
+
+        def _pandas_dataframe(rows):
+            """Return rows payload for assertion-friendly fake dataframe behavior."""
+            return {'rows': rows}
+
+        def _polars_dataframe(columns):
+            """Return data payload for assertion-friendly fake dataframe behavior."""
+            return {'data': columns}
+
+        old_pandas = sys.modules.get("pandas")
+        old_polars = sys.modules.get("polars")
+        fake_pd = types.ModuleType("pandas")
+        fake_pd.DataFrame = _pandas_dataframe
+        fake_pl = types.ModuleType("polars")
+        fake_pl.DataFrame = _polars_dataframe
+
+        sys.modules["pandas"] = fake_pd
+        sys.modules["polars"] = fake_pl
+        try:
+            pandas_df = to_pandas(result)
+            polars_df = to_polars(result)
+        finally:
+            if old_pandas is None:
+                del sys.modules["pandas"]
+            else:
+                sys.modules["pandas"] = old_pandas
+            if old_polars is None:
+                del sys.modules["polars"]
+            else:
+                sys.modules["polars"] = old_polars
+
+        assert self._get_value(pandas_df, 0, 'timestamp') == np.datetime64('2026-01-01')
+        assert self._get_value(pandas_df, 1, 'MainGate') == 3.0
+        assert polars_df['data'][0]['MainGate'] == 2.0
+        assert polars_df['data'][1]['spill'] == 1.0
+
+    def test_converters_preserve_schema_for_empty_results(self):
+        """Test empty structured arrays preserve dtype schema columns in converters."""
+        from canteen.simulation import to_pandas, to_polars
+        import sys
+        import types
+
+        result = np.array(
+            [],
+            dtype=[
+                ('timestep', np.int32),
+                ('timestamp', 'datetime64[D]'),
+                ('inflow', np.float64),
+                ('storage', np.float64),
+                ('MainGate', np.float64),
+                ('spill', np.float64),
+            ],
+        )
+
+        def _pandas_dataframe(data):
+            """Return data payload for assertion-friendly fake dataframe behavior."""
+            return {'data': data}
+
+        def _polars_dataframe(columns):
+            """Return data payload for assertion-friendly fake dataframe behavior."""
+            return {'data': columns}
+
+        old_pandas = sys.modules.get("pandas")
+        old_polars = sys.modules.get("polars")
+        fake_pd = types.ModuleType("pandas")
+        fake_pd.DataFrame = _pandas_dataframe
+        fake_pl = types.ModuleType("polars")
+        fake_pl.DataFrame = _polars_dataframe
+
+        sys.modules["pandas"] = fake_pd
+        sys.modules["polars"] = fake_pl
+        try:
+            pandas_df = to_pandas(result)
+            polars_df = to_polars(result)
+        finally:
+            if old_pandas is None:
+                del sys.modules["pandas"]
+            else:
+                sys.modules["pandas"] = old_pandas
+            if old_polars is None:
+                del sys.modules["polars"]
+            else:
+                sys.modules["polars"] = old_polars
+
+        expected_columns = [
+            'timestep',
+            'timestamp',
+            'inflow',
+            'storage',
+            'MainGate',
+            'spill',
+        ]
+        assert list(pandas_df['data'].dtype.names) == expected_columns
+        assert list(polars_df['data'].dtype.names) == expected_columns
+
+    def test_to_pandas_raises_helpful_error_when_pandas_missing(self, monkeypatch):
+        """Test that to_pandas raises ImportError with helpful guidance."""
+        import pytest
+        import sys
+        from importlib import import_module as real_import_module
+
+        from canteen.simulation import to_pandas
+
+        result = np.array(
+            [(0, 10.0, 50.0, 0.0)],
+            dtype=[
+                ('timestep', np.int32),
+                ('inflow', np.float64),
+                ('storage', np.float64),
+                ('spill', np.float64),
+            ],
+        )
+
+        def _fake_import(name, package=None):
+            if name == "pandas":
+                raise ImportError("No module named pandas")
+            return real_import_module(name, package)
+
+        monkeypatch.setattr("canteen.simulation.importlib.import_module", _fake_import)
+        monkeypatch.delitem(sys.modules, "pandas", raising=False)
+
+        with pytest.raises(ImportError, match="pandas"):
+            to_pandas(result)
+
+    def test_to_polars_raises_helpful_error_when_polars_missing(self, monkeypatch):
+        """Test that to_polars raises ImportError with helpful guidance."""
+        import pytest
+        import sys
+        from importlib import import_module as real_import_module
+
+        from canteen.simulation import to_polars
+
+        result = np.array(
+            [(0, 10.0, 50.0, 0.0)],
+            dtype=[
+                ('timestep', np.int32),
+                ('inflow', np.float64),
+                ('storage', np.float64),
+                ('spill', np.float64),
+            ],
+        )
+
+        def _fake_import(name, package=None):
+            if name == "polars":
+                raise ImportError("No module named polars")
+            return real_import_module(name, package)
+
+        monkeypatch.setattr("canteen.simulation.importlib.import_module", _fake_import)
+        monkeypatch.delitem(sys.modules, "polars", raising=False)
+
+        with pytest.raises(ImportError, match="polars"):
+            to_polars(result)

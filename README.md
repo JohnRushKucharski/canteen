@@ -30,6 +30,16 @@ source .venv/bin/activate  # On Linux/macOS
 .venv\Scripts\activate  # On Windows
 ```
 
+Install optional DataFrame dependencies only if you need converter helpers:
+
+```bash
+# pandas only
+uv sync --extra pandas
+
+# polars only
+uv sync --extra polars
+```
+
 ## Quick Start
 
 ### Building Reservoirs with Components

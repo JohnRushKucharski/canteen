@@ -8,6 +8,7 @@ calls operate(inflow) for each timestep, and records storage and outflow states.
 
 from typing import Sequence, Any
 import copy
+import importlib
 import numpy as np
 from numpy.typing import NDArray
 
@@ -16,11 +17,8 @@ from canteen.reservoir import Reservoir
 _RESERVED_COLUMNS: frozenset[str] = frozenset({'timestep', 'inflow', 'storage', 'spill'})
 
 
-def simulate(
-    reservoir: Reservoir,
-    inflows: Sequence[float] | NDArray[np.floating[Any]],
-    timestamps: Sequence[Any] | None = None
-) -> NDArray[np.void]:
+def simulate(reservoir: Reservoir, inflows: Sequence[float] | NDArray[np.floating[Any]],
+             timestamps: Sequence[Any] | None = None) -> NDArray[np.void]:
     """
     Simulate reservoir operations over multiple timesteps.
 
@@ -118,3 +116,27 @@ def simulate(
         result[timestep]['spill'] = outflows[-1]
 
     return result
+
+
+def to_pandas(result: NDArray[np.void]) -> Any:
+    """Convert simulation structured-array output to a pandas DataFrame."""
+    try:
+        pd = importlib.import_module("pandas")
+    except ImportError as exc:
+        raise ImportError(
+            "pandas is required for to_pandas(). Install it with `uv add pandas`."
+        ) from exc
+
+    return pd.DataFrame(result)
+
+
+def to_polars(result: NDArray[np.void]) -> Any:
+    """Convert simulation structured-array output to a polars DataFrame."""
+    try:
+        pl = importlib.import_module("polars")
+    except ImportError as exc:
+        raise ImportError(
+            "polars is required for to_polars(). Install it with `uv add polars`."
+        ) from exc
+
+    return pl.DataFrame(result)
