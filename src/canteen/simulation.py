@@ -8,6 +8,7 @@ calls operate(inflow) for each timestep, and records storage and outflow states.
 
 from typing import Sequence, Any
 import copy
+import importlib
 import numpy as np
 from numpy.typing import NDArray
 
@@ -118,3 +119,36 @@ def simulate(
         result[timestep]['spill'] = outflows[-1]
 
     return result
+
+
+def _to_rows(result: NDArray[np.void]) -> list[dict[str, Any]]:
+    """Convert a numpy structured array into a list of row dicts."""
+    names = result.dtype.names
+    if names is None:
+        raise ValueError("Result must be a numpy structured array with named columns.")
+
+    return [{name: row[name] for name in names} for row in result]
+
+
+def to_pandas(result: NDArray[np.void]) -> Any:
+    """Convert simulation structured-array output to a pandas DataFrame."""
+    try:
+        pd = importlib.import_module("pandas")
+    except ImportError as exc:
+        raise ImportError(
+            "pandas is required for to_pandas(). Install it with `uv add pandas`."
+        ) from exc
+
+    return pd.DataFrame(_to_rows(result))
+
+
+def to_polars(result: NDArray[np.void]) -> Any:
+    """Convert simulation structured-array output to a polars DataFrame."""
+    try:
+        pl = importlib.import_module("polars")
+    except ImportError as exc:
+        raise ImportError(
+            "polars is required for to_polars(). Install it with `uv add polars`."
+        ) from exc
+
+    return pl.DataFrame(_to_rows(result))
