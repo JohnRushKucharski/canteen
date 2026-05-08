@@ -10,6 +10,14 @@ from __future__ import annotations
 from typing import Any, Protocol, TYPE_CHECKING
 from dataclasses import dataclass
 
+from canteen.validation import (
+    validate_is_at_least,
+    validate_is_ascending_range,
+    validate_is_not_negative,
+    validate_operation_output_shape,
+    validate_is_on_range,
+)
+
 if TYPE_CHECKING:
     from canteen.reservoir import Reservoir
 
@@ -43,6 +51,8 @@ class Operations(Protocol):
             One release volume per outlet (highest-to-lowest location) plus spill
             as the final element. Returns (spill,) when no outlets are defined.
         """
+        return (0.0,)
+
     def output_labels(self, reservoir: Reservoir) -> tuple[str, ...]:
         """
         Get labels for operation outputs.
@@ -52,6 +62,7 @@ class Operations(Protocol):
         reservoir : Reservoir
             The reservoir to get labels for.
         """
+        return ('Spill',)
 
 @dataclass
 class PassiveOperations:
@@ -99,6 +110,77 @@ class PassiveOperations:
     def __repr__(self) -> str:
         """String representation."""
         return "PassiveOperations()"
+
+
+#TODO: Generalize the use of Decorators.
+
+@dataclass
+class HedgingOperationsDecorator:
+    """Operations decorator that reduces outlet releases in a hedging range."""
+
+    base_operations: Operations
+    hedging_min_storage: int | float
+    hedging_max_storage: int | float
+    reduction_factor: int | float
+
+    def __post_init__(self) -> None:
+        """Validate hedging parameter domains at construction time."""
+        validate_is_not_negative(self.hedging_min_storage, "hedging_min_storage")
+        validate_is_ascending_range(self.hedging_min_storage, self.hedging_max_storage, "hedging storage range") # pylint: disable=line-too-long
+        validate_is_on_range(self.reduction_factor, 0.0, 1.0, "reduction_factor")
+
+    def _apply_hedging(
+        self,
+        reservoir: Reservoir,
+        non_spill_outflows: tuple[int | float, ...],
+        active_storage: int | float,
+    ) -> tuple[tuple[int | float, ...], int | float]:
+        """Apply hedging to non-spill outflows, bounded by outlet release ranges."""
+        reduced_non_spill: list[int | float] = []
+        for base_release, outlet in zip(non_spill_outflows, reservoir.outlets, strict=True):
+            outlet_range = outlet.operations(active_storage)
+            reduced_release = base_release * self.reduction_factor
+            bounded_release = max(outlet_range.min, min(reduced_release, outlet_range.max))
+            reduced_non_spill.append(bounded_release)
+            active_storage -= bounded_release
+        return tuple(reduced_non_spill), active_storage
+
+    def operate(self, reservoir: Reservoir, inflow: int | float, *args: Any, **kwargs: Any
+                ) -> tuple[int | float, ...]:
+        """Delegate to base operations and optionally reduce non-spill releases."""
+        validate_is_at_least(reservoir.capacity, self.hedging_max_storage,
+                             "reservoir.capacity", "hedging_max_storage")
+
+        base_outflows = tuple(self.base_operations.operate(reservoir, inflow, *args, **kwargs))
+        validate_operation_output_shape(base_outflows, len(reservoir.outlets),
+                                        self.base_operations.__class__.__name__)
+
+        active_storage = reservoir.storage + inflow
+        if not self.hedging_min_storage <= active_storage <= self.hedging_max_storage:
+            return base_outflows
+
+        reduced_non_spill, active_storage = self._apply_hedging(
+            reservoir,
+            base_outflows[:-1],
+            active_storage,
+        )
+        spill = max(0.0, active_storage - reservoir.capacity)
+        return reduced_non_spill + (spill,)
+
+    def output_labels(self, reservoir: Reservoir) -> tuple[str, ...]:
+        """Delegate output labels to wrapped operations strategy."""
+        return self.base_operations.output_labels(reservoir)
+
+    def __repr__(self) -> str:
+        """String representation."""
+        return (
+            "HedgingOperationsDecorator("
+            f"base_operations={self.base_operations}, "
+            f"hedging_min_storage={self.hedging_min_storage}, "
+            f"hedging_max_storage={self.hedging_max_storage}, "
+            f"reduction_factor={self.reduction_factor}"
+            ")"
+        )
 
 NAMED_OPERATIONS = {
     "PASSIVE": PassiveOperations,
