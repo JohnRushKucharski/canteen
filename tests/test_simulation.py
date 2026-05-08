@@ -272,14 +272,21 @@ class TestSimulateValidation:
         from canteen.reservoir import Reservoir, BaseReservoir
 
         # Create custom operations that fails to spill properly (buggy strategy)
+        # pylint: disable=redefined-outer-name
         class BuggyOperations(Operations):
             """Operations that doesn't release or spill anything."""
 
             def operate(
-                self, reservoir: Reservoir, inflow: float
+                self,
+                reservoir: Reservoir,
+                inflow: float,
+                *args,
+                **kwargs,
             ) -> tuple[float, ...]:
                 """Return zero outflows (buggy - doesn't spill)."""
+                _ = (reservoir, inflow, args, kwargs)
                 return (0.0,)  # No spill, will cause capacity overflow
+        # pylint: enable=redefined-outer-name
 
         # Create reservoir with buggy operations directly
         res = BaseReservoir(
