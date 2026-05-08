@@ -17,11 +17,8 @@ from canteen.reservoir import Reservoir
 _RESERVED_COLUMNS: frozenset[str] = frozenset({'timestep', 'inflow', 'storage', 'spill'})
 
 
-def simulate(
-    reservoir: Reservoir,
-    inflows: Sequence[float] | NDArray[np.floating[Any]],
-    timestamps: Sequence[Any] | None = None
-) -> NDArray[np.void]:
+def simulate(reservoir: Reservoir, inflows: Sequence[float] | NDArray[np.floating[Any]],
+             timestamps: Sequence[Any] | None = None) -> NDArray[np.void]:
     """
     Simulate reservoir operations over multiple timesteps.
 
@@ -121,15 +118,6 @@ def simulate(
     return result
 
 
-def _to_rows(result: NDArray[np.void]) -> list[dict[str, Any]]:
-    """Convert a numpy structured array into a list of row dicts."""
-    names = result.dtype.names
-    if names is None:
-        raise ValueError("Result must be a numpy structured array with named columns.")
-
-    return [{name: row[name] for name in names} for row in result]
-
-
 def _to_columns(result: NDArray[np.void]) -> dict[str, NDArray[Any]]:
     """Convert a numpy structured array into column arrays keyed by field name."""
     names = result.dtype.names
@@ -148,14 +136,7 @@ def to_pandas(result: NDArray[np.void]) -> Any:
             "pandas is required for to_pandas(). Install it with `uv add pandas`."
         ) from exc
 
-    data_frame = getattr(pd, "DataFrame", None)
-    if data_frame is not None and hasattr(data_frame, "from_records"):
-        return data_frame.from_records(result)
-
-    if len(result) == 0:
-        return pd.DataFrame(_to_columns(result))
-
-    return pd.DataFrame(_to_rows(result))
+    return pd.DataFrame(result)
 
 
 def to_polars(result: NDArray[np.void]) -> Any:

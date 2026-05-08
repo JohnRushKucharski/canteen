@@ -398,8 +398,8 @@ class TestSimulationDataFrameConverters:
         assert self._get_value(converted, 0, 'inflow') == 10.0
         assert self._get_value(converted, 1, 'spill') == 5.0
 
-    def test_to_pandas_prefers_from_records_when_available(self):
-        """Test that to_pandas uses DataFrame.from_records when available."""
+    def test_to_pandas_passes_structured_array_directly_to_dataframe(self):
+        """Test that to_pandas passes the structured array directly to DataFrame()."""
         from canteen.simulation import to_pandas
         import sys
         import types
@@ -414,16 +414,12 @@ class TestSimulationDataFrameConverters:
             ],
         )
 
-        class _FakeDataFrame:
-            """Fake DataFrame class exposing from_records constructor."""
-
-            @staticmethod
-            def from_records(records):
-                """Return records payload for assertion-friendly behavior."""
-                return {'records': records}
+        def _dataframe(data):
+            """Capture the argument passed to DataFrame() for assertion."""
+            return {'data': data}
 
         monkey_module = types.ModuleType("pandas")
-        monkey_module.DataFrame = _FakeDataFrame
+        monkey_module.DataFrame = _dataframe
         old_pandas = sys.modules.get("pandas")
         sys.modules["pandas"] = monkey_module
         try:
@@ -434,8 +430,9 @@ class TestSimulationDataFrameConverters:
             else:
                 sys.modules["pandas"] = old_pandas
 
-        assert isinstance(converted, dict)
-        assert converted['records'][0]['timestep'] == 0
+        # Fake receives the raw structured array — not a row-dict list
+        assert isinstance(converted['data'], np.ndarray)
+        assert converted['data'].dtype.names == ('timestep', 'inflow', 'storage', 'spill')
 
     def test_converters_handle_results_with_outlet_columns_and_timestamps(self):
         """Test converter compatibility with richer simulation schemas."""
@@ -511,9 +508,9 @@ class TestSimulationDataFrameConverters:
             ],
         )
 
-        def _pandas_dataframe(columns):
-            """Return columns payload for assertion-friendly fake dataframe behavior."""
-            return {'columns': columns}
+        def _pandas_dataframe(data):
+            """Return data payload for assertion-friendly fake dataframe behavior."""
+            return {'data': data}
 
         def _polars_dataframe(columns):
             """Return columns payload for assertion-friendly fake dataframe behavior."""
@@ -549,7 +546,7 @@ class TestSimulationDataFrameConverters:
             'MainGate',
             'spill',
         ]
-        assert list(pandas_df['columns'].keys()) == expected_columns
+        assert list(pandas_df['data'].dtype.names) == expected_columns
         assert list(polars_df['columns'].keys()) == expected_columns
 
     def test_to_pandas_raises_helpful_error_when_pandas_missing(self, monkeypatch):
