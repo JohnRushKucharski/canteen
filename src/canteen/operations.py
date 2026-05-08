@@ -129,12 +129,8 @@ class HedgingOperationsDecorator:
         validate_is_ascending_range(self.hedging_min_storage, self.hedging_max_storage, "hedging storage range") # pylint: disable=line-too-long
         validate_is_on_range(self.reduction_factor, 0.0, 1.0, "reduction_factor")
 
-    def _apply_hedging(
-        self,
-        reservoir: Reservoir,
-        non_spill_outflows: tuple[int | float, ...],
-        active_storage: int | float,
-    ) -> tuple[tuple[int | float, ...], int | float]:
+    def _apply_hedging(self, reservoir: Reservoir, non_spill_outflows: tuple[int | float, ...],
+                       active_storage: int | float) -> tuple[tuple[int | float, ...], int | float]:
         """Apply hedging to non-spill outflows, bounded by outlet release ranges."""
         reduced_non_spill: list[int | float] = []
         for base_release, outlet in zip(non_spill_outflows, reservoir.outlets, strict=True):
@@ -159,11 +155,8 @@ class HedgingOperationsDecorator:
         if not self.hedging_min_storage <= active_storage <= self.hedging_max_storage:
             return base_outflows
 
-        reduced_non_spill, active_storage = self._apply_hedging(
-            reservoir,
-            base_outflows[:-1],
-            active_storage,
-        )
+        reduced_non_spill, active_storage = self._apply_hedging(reservoir,
+                                                                base_outflows[:-1], active_storage)
         spill = max(0.0, active_storage - reservoir.capacity)
         return reduced_non_spill + (spill,)
 
