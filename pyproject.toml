@@ -15,6 +15,12 @@ dependencies = [
 units = [
     "units",
 ]
+pandas = [
+    "pandas>=2.2.0",
+]
+polars = [
+    "polars>=1.0.0",
+]
 
 [build-system]
 requires = ["hatchling"]
