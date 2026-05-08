@@ -317,6 +317,13 @@ class TestSimulateValidation:
 class TestSimulationDataFrameConverters:
     """Test structured-array to DataFrame converter helpers."""
 
+    @staticmethod
+    def _get_value(frame_payload, row_index, column_name):
+        """Read values from fake row- or column-oriented frame payloads."""
+        if 'rows' in frame_payload:
+            return frame_payload['rows'][row_index][column_name]
+        return frame_payload['columns'][column_name][row_index]
+
     def test_to_pandas_converts_structured_array_to_dataframe(self):
         """Test that to_pandas converts simulation result to pandas DataFrame."""
         from canteen.simulation import to_pandas
@@ -370,9 +377,9 @@ class TestSimulationDataFrameConverters:
             ],
         )
 
-        def _dataframe(rows):
-            """Return rows payload for assertion-friendly fake dataframe behavior."""
-            return {'rows': rows}
+        def _dataframe(columns):
+            """Return columns payload for assertion-friendly fake dataframe behavior."""
+            return {'columns': columns}
 
         monkey_module = types.ModuleType("polars")
         monkey_module.DataFrame = _dataframe
@@ -387,9 +394,48 @@ class TestSimulationDataFrameConverters:
                 sys.modules["polars"] = old_polars
 
         assert isinstance(converted, dict)
-        assert len(converted['rows']) == 2
-        assert converted['rows'][0]['inflow'] == 10.0
-        assert converted['rows'][1]['spill'] == 5.0
+        assert len(converted['columns']['timestep']) == 2
+        assert self._get_value(converted, 0, 'inflow') == 10.0
+        assert self._get_value(converted, 1, 'spill') == 5.0
+
+    def test_to_pandas_prefers_from_records_when_available(self):
+        """Test that to_pandas uses DataFrame.from_records when available."""
+        from canteen.simulation import to_pandas
+        import sys
+        import types
+
+        result = np.array(
+            [(0, 10.0, 50.0, 0.0)],
+            dtype=[
+                ('timestep', np.int32),
+                ('inflow', np.float64),
+                ('storage', np.float64),
+                ('spill', np.float64),
+            ],
+        )
+
+        class _FakeDataFrame:
+            """Fake DataFrame class exposing from_records constructor."""
+
+            @staticmethod
+            def from_records(records):
+                """Return records payload for assertion-friendly behavior."""
+                return {'records': records}
+
+        monkey_module = types.ModuleType("pandas")
+        monkey_module.DataFrame = _FakeDataFrame
+        old_pandas = sys.modules.get("pandas")
+        sys.modules["pandas"] = monkey_module
+        try:
+            converted = to_pandas(result)
+        finally:
+            if old_pandas is None:
+                del sys.modules["pandas"]
+            else:
+                sys.modules["pandas"] = old_pandas
+
+        assert isinstance(converted, dict)
+        assert converted['records'][0]['timestep'] == 0
 
     def test_converters_handle_results_with_outlet_columns_and_timestamps(self):
         """Test converter compatibility with richer simulation schemas."""
@@ -412,16 +458,20 @@ class TestSimulationDataFrameConverters:
             ],
         )
 
-        def _dataframe(rows):
+        def _pandas_dataframe(rows):
             """Return rows payload for assertion-friendly fake dataframe behavior."""
             return {'rows': rows}
+
+        def _polars_dataframe(columns):
+            """Return columns payload for assertion-friendly fake dataframe behavior."""
+            return {'columns': columns}
 
         old_pandas = sys.modules.get("pandas")
         old_polars = sys.modules.get("polars")
         fake_pd = types.ModuleType("pandas")
-        fake_pd.DataFrame = _dataframe
+        fake_pd.DataFrame = _pandas_dataframe
         fake_pl = types.ModuleType("polars")
-        fake_pl.DataFrame = _dataframe
+        fake_pl.DataFrame = _polars_dataframe
 
         sys.modules["pandas"] = fake_pd
         sys.modules["polars"] = fake_pl
@@ -438,10 +488,10 @@ class TestSimulationDataFrameConverters:
             else:
                 sys.modules["polars"] = old_polars
 
-        assert pandas_df['rows'][0]['timestamp'] == np.datetime64('2026-01-01')
-        assert pandas_df['rows'][1]['MainGate'] == 3.0
-        assert polars_df['rows'][0]['MainGate'] == 2.0
-        assert polars_df['rows'][1]['spill'] == 1.0
+        assert self._get_value(pandas_df, 0, 'timestamp') == np.datetime64('2026-01-01')
+        assert self._get_value(pandas_df, 1, 'MainGate') == 3.0
+        assert self._get_value(polars_df, 0, 'MainGate') == 2.0
+        assert self._get_value(polars_df, 1, 'spill') == 1.0
 
     def test_to_pandas_raises_helpful_error_when_pandas_missing(self):
         """Test that to_pandas raises ImportError with helpful guidance."""

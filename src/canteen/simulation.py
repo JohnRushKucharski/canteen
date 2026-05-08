@@ -130,6 +130,15 @@ def _to_rows(result: NDArray[np.void]) -> list[dict[str, Any]]:
     return [{name: row[name] for name in names} for row in result]
 
 
+def _to_columns(result: NDArray[np.void]) -> dict[str, NDArray[Any]]:
+    """Convert a numpy structured array into column arrays keyed by field name."""
+    names = result.dtype.names
+    if names is None:
+        raise ValueError("Result must be a numpy structured array with named columns.")
+
+    return {name: result[name] for name in names}
+
+
 def to_pandas(result: NDArray[np.void]) -> Any:
     """Convert simulation structured-array output to a pandas DataFrame."""
     try:
@@ -138,6 +147,10 @@ def to_pandas(result: NDArray[np.void]) -> Any:
         raise ImportError(
             "pandas is required for to_pandas(). Install it with `uv add pandas`."
         ) from exc
+
+    data_frame = getattr(pd, "DataFrame", None)
+    if data_frame is not None and hasattr(data_frame, "from_records"):
+        return data_frame.from_records(result)
 
     return pd.DataFrame(_to_rows(result))
 
@@ -151,4 +164,13 @@ def to_polars(result: NDArray[np.void]) -> Any:
             "polars is required for to_polars(). Install it with `uv add polars`."
         ) from exc
 
-    return pl.DataFrame(_to_rows(result))
+    columns = _to_columns(result)
+
+    if hasattr(pl, "from_dict"):
+        return pl.from_dict(columns)
+
+    data_frame = getattr(pl, "DataFrame", None)
+    if data_frame is not None:
+        return data_frame(columns)
+
+    raise ValueError("polars module does not expose from_dict() or DataFrame().")
