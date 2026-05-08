@@ -73,6 +73,13 @@ def simulate(
     if len(inflows) == 0:
         return np.array([], dtype=dtype)
 
+    # Validate reservoir has operations defined
+    if reservoir.operations is None:
+        raise ValueError(
+            "Reservoir must have operations defined. "
+            "Use reservoir.factory() with operations or builder pattern."
+        )
+
     # Copy reservoir to preserve original
     res_copy = copy.deepcopy(reservoir)
 
@@ -83,6 +90,20 @@ def simulate(
     for timestep, inflow in enumerate(inflows):
         # Call operate to get outflows
         outflows = res_copy.operate(inflow)
+
+        # Validate storage bounds after operation
+        if res_copy.storage < 0:
+            raise ValueError(
+                f"Storage became negative at timestep {timestep}: "
+                f"storage={res_copy.storage:.2f}. "
+                f"Check inflows and operations configuration."
+            )
+        if res_copy.storage > res_copy.capacity:
+            raise ValueError(
+                f"Storage exceeded capacity at timestep {timestep}: "
+                f"storage={res_copy.storage:.2f}, capacity={res_copy.capacity:.2f}. "
+                f"Check operations spill behavior."
+            )
 
         # Record results
         result[timestep]['timestep'] = timestep
