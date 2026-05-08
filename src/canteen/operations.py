@@ -129,6 +129,22 @@ class HedgingOperationsDecorator:
         validate_is_ascending_range(self.hedging_min_storage, self.hedging_max_storage, "hedging storage range") # pylint: disable=line-too-long
         validate_is_on_range(self.reduction_factor, 0.0, 1.0, "reduction_factor")
 
+    def _apply_hedging(
+        self,
+        reservoir: Reservoir,
+        non_spill_outflows: tuple[int | float, ...],
+        active_storage: int | float,
+    ) -> tuple[tuple[int | float, ...], int | float]:
+        """Apply hedging to non-spill outflows, bounded by outlet release ranges."""
+        reduced_non_spill: list[int | float] = []
+        for base_release, outlet in zip(non_spill_outflows, reservoir.outlets, strict=True):
+            outlet_range = outlet.operations(active_storage)
+            reduced_release = base_release * self.reduction_factor
+            bounded_release = max(outlet_range.min, min(reduced_release, outlet_range.max))
+            reduced_non_spill.append(bounded_release)
+            active_storage -= bounded_release
+        return tuple(reduced_non_spill), active_storage
+
     def operate(self, reservoir: Reservoir, inflow: int | float, *args: Any, **kwargs: Any
                 ) -> tuple[int | float, ...]:
         """Delegate to base operations and optionally reduce non-spill releases."""
@@ -143,22 +159,13 @@ class HedgingOperationsDecorator:
         if not self.hedging_min_storage <= active_storage <= self.hedging_max_storage:
             return base_outflows
 
-        non_spill = base_outflows[:-1]
-
-        reduced_non_spill: list[int | float] = []
-        for base_release, outlet in zip(non_spill, reservoir.outlets, strict=True):
-            outlet_range = outlet.operations(active_storage)
-            reduced_release = base_release * self.reduction_factor
-            bounded_release = max(
-                outlet_range.min,
-                min(reduced_release, outlet_range.max),
-            )
-            reduced_non_spill.append(bounded_release)
-            active_storage -= bounded_release
-
-        post_release_active_storage = active_storage
-        spill = max(0.0, post_release_active_storage - reservoir.capacity)
-        return tuple(reduced_non_spill) + (spill,)
+        reduced_non_spill, active_storage = self._apply_hedging(
+            reservoir,
+            base_outflows[:-1],
+            active_storage,
+        )
+        spill = max(0.0, active_storage - reservoir.capacity)
+        return reduced_non_spill + (spill,)
 
     def output_labels(self, reservoir: Reservoir) -> tuple[str, ...]:
         """Delegate output labels to wrapped operations strategy."""
