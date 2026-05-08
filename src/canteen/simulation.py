@@ -118,15 +118,6 @@ def simulate(reservoir: Reservoir, inflows: Sequence[float] | NDArray[np.floatin
     return result
 
 
-def _to_columns(result: NDArray[np.void]) -> dict[str, NDArray[Any]]:
-    """Convert a numpy structured array into column arrays keyed by field name."""
-    names = result.dtype.names
-    if names is None:
-        raise ValueError("Result must be a numpy structured array with named columns.")
-
-    return {name: result[name] for name in names}
-
-
 def to_pandas(result: NDArray[np.void]) -> Any:
     """Convert simulation structured-array output to a pandas DataFrame."""
     try:
@@ -148,13 +139,4 @@ def to_polars(result: NDArray[np.void]) -> Any:
             "polars is required for to_polars(). Install it with `uv add polars`."
         ) from exc
 
-    columns = _to_columns(result)
-
-    if hasattr(pl, "from_dict"):
-        return pl.from_dict(columns)
-
-    data_frame = getattr(pl, "DataFrame", None)
-    if data_frame is not None:
-        return data_frame(columns)
-
-    raise ValueError("polars module does not expose from_dict() or DataFrame().")
+    return pl.DataFrame(result)
