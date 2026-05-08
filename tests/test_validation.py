@@ -19,6 +19,7 @@ from canteen.validation import (
     is_strictly_decreasing,
     is_strictly_monotonic,
     is_valid_day_of_year,
+    validate_operation_output_shape,
 )
 
 
@@ -258,3 +259,16 @@ class TestIsValidDayOfYear:
             is_valid_day_of_year(0)
         with pytest.raises(ValueError):
             is_valid_day_of_year(366)
+
+
+class TestValidateOperationOutputShape:
+    """Test operation output shape validation helper."""
+
+    def test_valid_output_shape_no_exception(self):
+        """Valid shape is one output per outlet plus spill."""
+        validate_operation_output_shape((10.0, 5.0, 0.0), outlet_count=2, operation_name="Op")
+
+    def test_invalid_output_shape_raises_value_error(self):
+        """Invalid shape raises with clear contract message."""
+        with pytest.raises(ValueError, match="Operation output shape invalid"):
+            validate_operation_output_shape((10.0,), outlet_count=2, operation_name="BadOp")

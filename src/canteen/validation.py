@@ -270,6 +270,18 @@ def is_equal_lengths(*sequences: Sequence[Any]) -> bool:
     first_length = len(sequences[0])
     return all(len(seq) == first_length for seq in sequences)
 
+
+def validate_operation_output_shape(outputs: Sequence[Any], outlet_count: int, operation_name: str
+                                    ) -> None:
+    """Validate operations output shape as one value per outlet plus spill."""
+    expected_outputs = outlet_count + 1
+    if len(outputs) != expected_outputs:
+        raise ValueError(
+            "Operation output shape invalid. "
+            f"Expected {expected_outputs} values (one per outlet plus spill), "
+            f"got {len(outputs)} from {operation_name}."
+        )
+
 def is_increasing(sequence: Sequence[int|float]) -> bool:
     """
     Check if a sequence of numbers is non-decreasing.

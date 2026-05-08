@@ -17,7 +17,11 @@ from canteen.mapping import Mappings
 from canteen.pool import Pools
 from canteen.outlet import Outlets
 from canteen.operations import Operations, PassiveOperations
-from canteen.validation import validate_is_not_negative, validate_is_at_least
+from canteen.validation import (
+    validate_is_at_least,
+    validate_is_not_negative,
+    validate_operation_output_shape,
+)
 
 class Reservoir(Protocol):
     '''
@@ -67,16 +71,8 @@ class BaseReservoir:
             object.__setattr__(self, 'pools', Pools())
         if self.mappings is None:
             object.__setattr__(self, 'mappings', Mappings())
-        if len(self.outlets) > 0 and not self.is_outlets_less_than_capacity(self.outlets):
-            raise ValueError(
-                    f"""Invalid outlet location. Reservoir capacity: {self.capacity} must be
-                    greater than outlet location.
-                    Got outlets:{[f'{o.name}: {o.location}' for o in self.outlets]}.""")
-        if len(self.pools) > 0 and not self.is_pools_less_than_capacity(self.pools):
-            raise ValueError(
-                    f"""Invalid pool location. Reservoir capacity: {self.capacity} must be
-                    greater than top of storage for upper pool.
-                    {self.pools[0].info.name} has top of storage:{self.pools[0].info.range_[1]}.""")
+        self._validate_outlets_within_capacity(self.outlets)
+        self._validate_pools_within_capacity(self.pools)
         # Freeze structural fields — storage remains mutable (ADR-0002).
         object.__setattr__(self, '_initialised', True)
 
@@ -98,6 +94,28 @@ class BaseReservoir:
         """Check if outlet location is less than reservoir capacity."""
         return all(outlet.location <= self.capacity for outlet in outlets)
 
+    def _validate_pools_within_capacity(self, pools: Pools) -> None:
+        """Raise when any pool exceeds reservoir capacity."""
+        if len(pools) == 0:
+            return
+        if not self.is_pools_less_than_capacity(pools):
+            raise ValueError(
+                f"""Invalid pool location. Reservoir capacity: {self.capacity} must be
+                greater than top of storage for upper pool.
+                {pools[0].info.name} has top of storage:{pools[0].info.range_[1]}."""
+            )
+
+    def _validate_outlets_within_capacity(self, outlets: Outlets) -> None:
+        """Raise when any outlet exceeds reservoir capacity."""
+        if len(outlets) == 0:
+            return
+        if not self.is_outlets_less_than_capacity(outlets):
+            raise ValueError(
+                f"""Invalid outlet location. Reservoir capacity: {self.capacity} must be
+                greater than outlet location.
+                Got outlets:{[f'{o.name}: {o.location}' for o in outlets]}."""
+            )
+
     def add_maps(self, mappings: Mappings) -> Self:
         """Add mappings to the reservoir, modifying its state."""
         if len(self.mappings) > 0:
@@ -109,11 +127,7 @@ class BaseReservoir:
         """Add pools to the reservoir, modifying its state."""
         if len(self.pools) > 0:
             raise ValueError("Pools already defined for reservoir.")
-        if not self.is_pools_less_than_capacity(pools):
-            raise ValueError(
-                f"""Invalid pool location. Reservoir capacity: {self.capacity} must be
-                greater than top of storage for upper pool.
-                {pools[0].info.name} has top of storage:{pools[0].info.range_[1]}.""")
+        self._validate_pools_within_capacity(pools)
         object.__setattr__(self, 'pools', pools)
         return self
 
@@ -121,11 +135,7 @@ class BaseReservoir:
         """Add outlets to the reservoir, modifying its state."""
         if len(self.outlets) > 0:
             raise ValueError("Outlets already defined for reservoir.")
-        if not self.is_outlets_less_than_capacity(outlets):
-            raise ValueError(
-                f"""Invalid outlet location. Reservoir capacity: {self.capacity} must be
-                greater than outlet location.
-                Got outlets:{[f'{o.name}: {o.location}' for o in outlets]}.""")
+        self._validate_outlets_within_capacity(outlets)
         object.__setattr__(self, 'outlets', outlets)
         return self
 
@@ -142,7 +152,12 @@ class BaseReservoir:
         """Perform reservoir operations and advance storage."""
         if not self.operations:
             raise ValueError('No operations defined for reservoir.')
-        result = self.operations.operate(self, inflow, *args, **kwargs)
+        result = tuple(self.operations.operate(self, inflow, *args, **kwargs))
+        validate_operation_output_shape(
+            result,
+            len(self.outlets),
+            self.operations.__class__.__name__,
+        )
         self.storage = self.storage + inflow - sum(result)
         return result
 

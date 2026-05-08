@@ -320,6 +320,120 @@ class TestHedgingOperationsDecorator:
 
         assert result == (10.0, 0.0)
 
+    def test_delegates_when_active_storage_outside_hedging_range(self):
+        """Decorator should use active storage (storage + inflow) for hedging trigger."""
+        outlet = outlet_factory(name="spillway", location=50.0,
+                               design_range=ReleaseRange(0, 20))
+        reservoir = BaseReservoir(
+            name="Test", storage=70, capacity=100,
+            outlets=Outlets([outlet]),
+            operations=HedgingOperationsDecorator(
+                base_operations=PassiveOperations(),
+                hedging_min_storage=40.0,
+                hedging_max_storage=80.0,
+                reduction_factor=0.5,
+            )
+        )
+
+        result = reservoir.operate(inflow=20)
+
+        # storage=70 is in range, but active_storage=90 is not, so no hedging applies.
+        assert result == (20, 0.0)
+
+    @pytest.mark.parametrize("hedging_min_storage,hedging_max_storage", [
+        (-1.0, 80.0),
+        (40.0, -1.0),
+        (80.0, 40.0),
+    ])
+    def test_invalid_hedging_zone_raises_value_error(
+        self,
+        hedging_min_storage: float,
+        hedging_max_storage: float,
+    ):
+        """Decorator should reject invalid hedging zone parameters."""
+        with pytest.raises(ValueError):
+            HedgingOperationsDecorator(
+                base_operations=PassiveOperations(),
+                hedging_min_storage=hedging_min_storage,
+                hedging_max_storage=hedging_max_storage,
+                reduction_factor=0.5,
+            )
+
+    @pytest.mark.parametrize("reduction_factor", [-0.1, 1.1])
+    def test_invalid_reduction_factor_raises_value_error(self, reduction_factor: float):
+        """Decorator should reject reduction factors outside [0, 1]."""
+        with pytest.raises(ValueError):
+            HedgingOperationsDecorator(
+                base_operations=PassiveOperations(),
+                hedging_min_storage=40.0,
+                hedging_max_storage=80.0,
+                reduction_factor=reduction_factor,
+            )
+
+    def test_hedging_does_not_reduce_below_outlet_min_release(self):
+        """Decorator should keep hedged release within the outlet release range."""
+        outlet = outlet_factory(name="controlled", location=40.0,
+                               design_range=ReleaseRange(5, 20))
+        reservoir = BaseReservoir(
+            name="Test", storage=60, capacity=100,
+            outlets=Outlets([outlet]),
+            operations=HedgingOperationsDecorator(
+                base_operations=PassiveOperations(),
+                hedging_min_storage=40.0,
+                hedging_max_storage=90.0,
+                reduction_factor=0.1,
+            )
+        )
+
+        result = reservoir.operate(inflow=10)
+
+        # Base max release is 20, hedged candidate is 2, outlet min is 5.
+        assert result == (5, 0.0)
+
+    def test_hedging_max_zone_above_capacity_raises_on_operate(self):
+        """Decorator should reject hedging max zone above reservoir capacity."""
+        outlet = outlet_factory(name="spillway", location=50.0,
+                               design_range=ReleaseRange(0, 20))
+        reservoir = BaseReservoir(
+            name="Test", storage=60, capacity=100,
+            outlets=Outlets([outlet]),
+            operations=HedgingOperationsDecorator(
+                base_operations=PassiveOperations(),
+                hedging_min_storage=40.0,
+                hedging_max_storage=120.0,
+                reduction_factor=0.5,
+            )
+        )
+
+        with pytest.raises(ValueError, match="reservoir.capacity"):
+            reservoir.operate(inflow=10)
+
+    def test_raises_for_invalid_wrapped_output_shape(self):
+        """Decorator should raise when wrapped operations violate output contract."""
+        class EmptyOutputOperations:
+            '''Mock operations for testing.'''
+            def operate(self, reservoir, inflow, *args, **kwargs):
+                '''Mock operate method.'''
+                return ()
+
+            def output_labels(self, reservoir):
+                '''Mock output_labels method.'''
+                return ()
+
+        operations = HedgingOperationsDecorator(
+            base_operations=EmptyOutputOperations(),
+            hedging_min_storage=40.0,
+            hedging_max_storage=80.0,
+            reduction_factor=0.5,
+        )
+        reservoir = BaseReservoir(
+            name="Test", storage=60, capacity=100,
+            operations=operations,
+        )
+
+        with pytest.raises(ValueError, match="Operation output shape invalid"):
+            operations.operate(reservoir, inflow=10)
+
     def test_output_labels_delegate_to_base_operations(self):
         """Decorator should preserve output labels from the wrapped strategy."""
         outlet = outlet_factory(name="spillway", location=50.0,

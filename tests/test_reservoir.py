@@ -381,6 +381,48 @@ class TestReservoirOperations:
         # storage (50) + inflow (10) = 60, which is below capacity (100), so spill = 0
         assert result == (0.0,)
 
+    def test_operate_raises_when_operations_return_empty_output(self):
+        """Boundary validation should reject empty operation outputs."""
+        class EmptyOutputOperations:
+            '''Mock operations for testing.'''
+            def operate(self, reservoir, inflow, *args, **kwargs):
+                '''Mock operate method that returns empty output, violating contract.'''
+                return ()
+
+            def output_labels(self, reservoir):
+                '''Mock output_labels method that returns empty output, violating contract.'''
+                return ()
+
+        reservoir = BaseReservoir(
+            name="Test", storage=50, capacity=100,
+            operations=EmptyOutputOperations()
+        )
+
+        with pytest.raises(ValueError, match="Operation output shape invalid"):
+            reservoir.operate(inflow=10)
+
+    def test_operate_raises_when_output_count_mismatches_outlets(self):
+        """Boundary validation should enforce one output per outlet plus spill."""
+        class MissingSpillOperations:
+            '''Mock operations returns one output per outlet but no spill, violating contract.'''
+            def operate(self, reservoir, inflow, *args, **kwargs):
+                '''Mock operate method one output per outlet but no spill, violating contract.'''
+                return (0.0,)
+
+            def output_labels(self, reservoir):
+                '''Mock output_labels method one label per outlet, no spill, violating contract.'''
+                return ("outlet",)
+
+        outlet = outlet_factory(name="spillway", location=50.0)
+        reservoir = BaseReservoir(
+            name="Test", storage=50, capacity=100,
+            outlets=Outlets([outlet]),
+            operations=MissingSpillOperations()
+        )
+
+        with pytest.raises(ValueError, match="Operation output shape invalid"):
+            reservoir.operate(inflow=10)
+
 
 class TestReservoirMapsAndBuilder:
     """Test reservoir maps and builder pattern."""
