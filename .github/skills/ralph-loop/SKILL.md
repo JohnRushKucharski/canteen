@@ -6,6 +6,16 @@ user-invocable: false
 
 # Ralph Loop
 
+## Configuration
+
+**Model Override**: Set to `true` to use default models (conserves token limits). Set to `false` to use specified models for optimal performance.
+
+```
+USE_DEFAULT_MODELS = false
+```
+
+---
+
 Orchestrate repeated fix-issue runs — one issue per fresh-context subagent — until a stopping condition is met.
 
 **AFK contract**: this skill requires no human input during execution. The fix-issue Phase A step 4 HITL confirmation is pre-approved by the user invoking this skill. If any other HITL checkpoint is reached inside fix-issue, the loop halts and reports to the user.
@@ -73,7 +83,7 @@ Pick the lowest-numbered eligible candidate.
 
 ### Step 1 — Spawn a fresh-context subagent
 
-Invoke a subagent using the `runSubagent` tool with `model: "Claude Sonnet 4.5 (copilot)"`. Pass it the following prompt, substituting `{number}` and `{title}`:
+Invoke a subagent using the `runSubagent` tool. If `USE_DEFAULT_MODELS` is `false`, specify `model: "Claude Sonnet 4.5 (copilot)"`; if `true`, omit the model parameter to use the default. Pass it the following prompt, substituting `{number}` and `{title}`:
 
 > Read the fix-issue skill at `.github/skills/fix-issue/SKILL.md` in full, then execute it for issue #{number} ("{title}").
 >

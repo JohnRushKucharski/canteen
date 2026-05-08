@@ -1,5 +1,11 @@
 # Canteen — Agent Instructions
 
+## Model Configuration
+
+Skills that spawn subagents can be configured to use default models instead of specified models to conserve token limits. See individual skill files for `USE_DEFAULT_MODELS` configuration (e.g., `.github/skills/ralph-loop/SKILL.md`).
+
+---
+
 ## Agent skills
 
 ### Ralph loop
