@@ -88,7 +88,7 @@ class TestSimulateEdgeCases:
     def test_simulate_empty_inflows_returns_empty_array(self):
         """Test that empty inflows returns empty array with correct dtype."""
         res = reservoir.factory(name="Test", storage=50.0, capacity=100.0)
-        inflows: list[float] = []
+        inflows = []
 
         result = simulate(res, inflows)
 

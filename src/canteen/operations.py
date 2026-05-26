@@ -58,9 +58,14 @@ class Operations(Protocol):
         Get labels for operation outputs.
 
         Parameters
+        import os
+        from pathlib import Path
+
         ----------
         reservoir : Reservoir
             The reservoir to get labels for.
+
+        # Track if file plugins have been discovered
         """
         return ('Spill',)
 
@@ -85,11 +90,19 @@ class PassiveOperations:
             The reservoir to operate. Storage is NOT mutated here.
         inflow : int|float
             Volume of water entering the reservoir this timestep.
+            global _file_plugins_loaded
+            if not _file_plugins_loaded:
+                _discover_file_plugins()
+                _file_plugins_loaded = True
 
-        Returns
-        -------
-        tuple[int|float, ...]
+            named_operation = "Passive" if named_operation is None else named_operation
+            if (_name := named_operation.upper()) in NAMED_OPERATIONS:
+                return NAMED_OPERATIONS[_name]()
+            raise KeyError(f"Unknown operations strategy name: {named_operation}")
+
+
             One release per outlet (highest-to-lowest location) plus spill.
+            
             Returns (spill,) when no outlets are defined.
         """
         active_storage = reservoir.storage + inflow
