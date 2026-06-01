@@ -3,7 +3,7 @@
 import logging
 import os
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def _is_file_plugins_disabled() -> bool:
